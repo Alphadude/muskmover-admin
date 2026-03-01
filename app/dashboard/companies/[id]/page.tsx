@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +16,18 @@ import {
   TrendingUp,
   Check,
   Clock,
+  AlertTriangle,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   mockCompanies,
   getCompanyById,
@@ -28,6 +40,8 @@ export default function CompanyDetailPage() {
   const router = useRouter()
   const params = useParams()
   const companyId = params.id as string
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [actionType, setActionType] = useState<'approve' | 'suspend' | null>(null)
 
   const company = getCompanyById(companyId)
   const equipment = getEquipmentByCompanyId(companyId)
@@ -275,11 +289,59 @@ export default function CompanyDetailPage() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button className="flex-1 h-12 rounded-xl bg-[#EA580C] hover:bg-[#D44D0A] font-bold shadow-[#EA580C]/20 shadow-lg border-0 transition-transform hover:scale-105 active:scale-95">Approve Business</Button>
-              <Button variant="outline" className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold transition-all">
+              <Button 
+                onClick={() => { setActionType('approve'); setIsModalOpen(true); }}
+                className="flex-1 h-12 rounded-xl bg-[#EA580C] hover:bg-[#D44D0A] font-bold shadow-[#EA580C]/20 shadow-lg border-0 transition-transform hover:scale-105 active:scale-95"
+              >
+                Approve Business
+              </Button>
+              <Button 
+                onClick={() => { setActionType('suspend'); setIsModalOpen(true); }}
+                variant="outline" 
+                className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold transition-all"
+              >
                 Suspend Account
               </Button>
             </div>
+
+            <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <AlertDialogContent className="rounded-2xl border-slate-200">
+                <AlertDialogHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 rounded-lg ${actionType === 'suspend' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                      {actionType === 'suspend' ? <AlertTriangle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+                    </div>
+                    <AlertDialogTitle className="text-xl font-bold text-slate-900">
+                      {actionType === 'approve' ? 'Approve Business' : 'Suspend Account'}
+                    </AlertDialogTitle>
+                  </div>
+                  <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+                    {actionType === 'approve' 
+                      ? `Are you sure you want to approve "${company.name}"? This will mark the business as verified and visible on the marketplace.`
+                      : `Are you sure you want to suspend the account for "${company.name}"? This will restrict their access to the platform and hide their listings.`
+                    }
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="mt-6">
+                  <AlertDialogCancel className="rounded-xl font-bold h-11 border-slate-200 text-slate-600 hover:bg-slate-50">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction 
+                    className={`rounded-xl font-bold h-11 border-0 shadow-lg transition-transform active:scale-95 ${
+                      actionType === 'suspend' 
+                        ? 'bg-destructive hover:bg-destructive/90 shadow-destructive/20' 
+                        : 'bg-[#EA580C] hover:bg-[#D44D0A] shadow-[#EA580C]/20'
+                    }`}
+                    onClick={() => {
+                      // Implementation logic would go here
+                      setIsModalOpen(false);
+                    }}
+                  >
+                    Confirm {actionType === 'approve' ? 'Approval' : 'Suspension'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
