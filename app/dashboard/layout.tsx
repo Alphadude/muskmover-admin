@@ -15,9 +15,16 @@ export default function DashboardLayout({
   const getTitle = (path: string) => {
     if (path === '/dashboard') return 'Dashboard'
     if (path.startsWith('/dashboard/companies/')) return 'Company Details'
-    if (path.startsWith('/dashboard/companies')) return 'Marine Companies'
-    if (path.startsWith('/dashboard/equipment')) return 'Equipment'
-    if (path.startsWith('/dashboard/orders')) return 'Orders'
+    if (path === '/dashboard/companies/new') return 'Add Company'
+    if (path === '/dashboard/companies') return 'Marine Companies'
+    
+    if (path.endsWith('/edit') && path.includes('/equipment/')) return 'Edit Asset'
+    if (path.endsWith('/orders') && path.includes('/equipment/')) return 'Asset Orders'
+    if (path === '/dashboard/equipment/new') return 'Add Asset'
+    if (path.startsWith('/dashboard/equipment/')) return 'Asset Details'
+    if (path === '/dashboard/equipment') return 'Equipment Inventory'
+    
+    if (path.startsWith('/dashboard/orders')) return 'Order Registry'
     if (path.startsWith('/dashboard/analytics')) return 'Analytics'
     if (path.startsWith('/dashboard/users')) return 'Admin Users'
     if (path.startsWith('/dashboard/settings')) return 'Settings'

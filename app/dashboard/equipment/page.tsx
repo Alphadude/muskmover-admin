@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -137,7 +138,7 @@ export default function EquipmentPage() {
       key: 'id' as const,
       label: 'Actions',
       width: '15%',
-      render: () => (
+      render: (_: string, item: Equipment) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -145,9 +146,15 @@ export default function EquipmentPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>View Details</DropdownMenuItem>
-            <DropdownMenuItem>Edit Equipment</DropdownMenuItem>
-            <DropdownMenuItem>View Orders</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/equipment/${item.id}`}>View Details</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/equipment/${item.id}/edit`}>Edit Equipment</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/equipment/${item.id}/orders`}>View Orders</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">
               Delete
             </DropdownMenuItem>
