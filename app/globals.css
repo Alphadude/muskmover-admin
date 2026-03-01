@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  /* Modern clean light theme with vibrant azure accents */
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+  --color-primary: #050B20;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #EA580C;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #f8fafc;
+  --color-muted-foreground: #64748b;
+  --color-accent: #EA580C;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #ff4d4d;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #f8fafc;
+  --color-ring: #050B20;
+  --color-chart-1: #050B20;
+  --color-chart-2: #EA580C;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #6366f1;
+  --color-chart-5: #ec4899;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20;
+  }
+  
+  .glass-dark {
+    @apply bg-slate-900/70 backdrop-blur-md border border-slate-700/30;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+  }
+
+  .gradient-ocean {
+    background: linear-gradient(135deg, #050B20 0%, #EA580C 100%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
