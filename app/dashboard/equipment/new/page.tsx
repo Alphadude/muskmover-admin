@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Save } from 'lucide-react'
+import { ChevronRight, Save, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,6 +26,19 @@ export default function AddEquipmentPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [images, setImages] = useState<string[]>([])
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
+    setImages((prev) => [...prev, ...newImages])
+  }
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -272,6 +285,54 @@ export default function AddEquipmentPage() {
             </div>
           </>
         )}
+
+        {/* ── MEDIA & IMAGES (shared) ── */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-900">Media & Images</h2>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              {images.length} / 10 Images
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {images.map((src, index) => (
+              <div key={index} className="relative group aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 text-slate-600 hover:text-destructive shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {images.length < 10 && (
+              <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer group">
+                <div className="p-3 rounded-full bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                  <Upload className="w-5 h-5 text-slate-400" />
+                </div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-3">Upload</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+              </label>
+            )}
+            {images.length === 0 && (
+              <div className="col-span-full py-10 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                  <ImageIcon className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-semibold text-slate-400">No images uploaded yet</p>
+                <p className="text-xs text-slate-400 mt-1">Upload at least one image of the {activeTab}</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-4 pt-2">
