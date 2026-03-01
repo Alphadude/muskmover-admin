@@ -2,6 +2,7 @@
 
 import { Bell, User, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 export function Header({ title }: { title: string }) {
   return (
@@ -35,15 +36,17 @@ export function Header({ title }: { title: string }) {
           </Button>
 
           {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative rounded-full hover:bg-slate-100 transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-slate-600" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
-          </Button>
+          <Link href="/dashboard/notifications">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative rounded-full hover:bg-slate-100 transition-colors"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5 text-slate-600" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
+            </Button>
+          </Link>
 
           {/* Quick filter */}
           <Button

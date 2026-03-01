@@ -21,6 +21,7 @@ export default function DashboardLayout({
     if (path.startsWith('/dashboard/analytics')) return 'Analytics'
     if (path.startsWith('/dashboard/users')) return 'Admin Users'
     if (path.startsWith('/dashboard/settings')) return 'Settings'
+    if (path === '/dashboard/notifications') return 'Notifications'
     return 'Admin Portal'
   }
 
