@@ -2,7 +2,8 @@
 
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,21 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('authToken')
+    if (!token) {
+      router.replace('/auth/login')
+    } else {
+      setIsAuthorized(true)
+    }
+  }, [router])
+
+  if (!isAuthorized) {
+    return null // or a loading spinner
+  }
   
   // Map pathnames to titles
   const getTitle = (path: string) => {

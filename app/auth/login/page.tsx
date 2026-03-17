@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Ship } from 'lucide-react'
+import { authService } from '@/lib/services/auth'
+import { useEffect } from 'react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,21 +14,29 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    const token = sessionStorage.getItem('authToken')
+    if (token) {
+      router.push('/dashboard')
+    }
+  }, [router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    // Simulate authentication
-    if (email && password) {
-      setTimeout(() => {
-        // Store a simple auth token in sessionStorage (for demo purposes)
-        sessionStorage.setItem('authToken', 'demo-token-' + Date.now())
-        sessionStorage.setItem('userEmail', email)
-        router.push('/dashboard')
-      }, 800)
-    } else {
-      setError('Please enter both email and password')
+    try {
+      const response = await authService.login({ email, password })
+      
+      // Store auth token and user details
+      sessionStorage.setItem('authToken', response.token)
+      sessionStorage.setItem('userEmail', response.admin.email)
+      sessionStorage.setItem('userName', response.admin.name)
+      
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.')
       setIsLoading(false)
     }
   }
