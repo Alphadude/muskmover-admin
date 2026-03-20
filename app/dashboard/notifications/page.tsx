@@ -16,7 +16,8 @@ export default function NotificationsPage() {
     try {
       setIsLoading(true)
       const data = await notificationService.getAll()
-      setNotifications(data)
+      const notificationsArray = Array.isArray(data) ? data : (data as any)?.notifications || (data as any)?.data || []
+      setNotifications(notificationsArray)
     } catch (err: any) {
       setError(err.message || 'Failed to load notifications')
     } finally {

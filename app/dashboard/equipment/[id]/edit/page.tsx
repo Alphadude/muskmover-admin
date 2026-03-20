@@ -45,8 +45,9 @@ export default function EditEquipmentPage() {
           companyService.getAll()
         ])
         setEquipment(item)
-        setCompanies(companiesData)
-        setImages(item.images)
+        const companiesArray = Array.isArray(companiesData) ? companiesData : (companiesData as any)?.companies || (companiesData as any)?.data || []
+        setCompanies(companiesArray)
+        setImages(item.images || [])
         setActiveTab(item.category === 'vessels' ? 'vessel' : 'equipment')
       } catch (err: any) {
         setError(err.message || 'Failed to fetch edit data')
@@ -157,7 +158,7 @@ export default function EditEquipmentPage() {
                 <SelectValue placeholder="Select Company" />
               </SelectTrigger>
               <SelectContent>
-                {companies.map((c) => (
+                {(companies || []).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>
@@ -274,7 +275,7 @@ export default function EditEquipmentPage() {
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {images.map((src, index) => (
+            {(images || []).map((src, index) => (
               <div key={index} className="relative group aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm">
                 <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
                 <button

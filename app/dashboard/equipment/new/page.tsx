@@ -37,7 +37,8 @@ export default function AddEquipmentPage() {
     const fetchCompanies = async () => {
       try {
         const data = await companyService.getAll()
-        setCompanies(data)
+        const companiesArray = Array.isArray(data) ? data : (data as any)?.companies || (data as any)?.data || []
+        setCompanies(companiesArray)
       } catch (err) {
         toast.error('Failed to load companies')
       }
@@ -150,7 +151,7 @@ export default function AddEquipmentPage() {
                 <SelectValue placeholder="Select Company" />
               </SelectTrigger>
               <SelectContent>
-                {companies.map((c) => (
+                {(companies || []).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>
@@ -335,7 +336,7 @@ export default function AddEquipmentPage() {
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {images.map((src, index) => (
+            {(images || []).map((src, index) => (
               <div key={index} className="relative group aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
                 <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
                 <button

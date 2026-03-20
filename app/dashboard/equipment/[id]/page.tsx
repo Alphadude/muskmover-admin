@@ -164,7 +164,7 @@ export default function EquipmentDetailPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
             <h2 className="text-xl font-black text-slate-900 mb-6">Technical Specifications</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
-              {Object.entries(item.specifications).map(([key, value]) => (
+              {Object.entries(item.specifications || {}).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 text-sm">
                   <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">{key.replace(/_/g, ' ')}</span>
                   <span className="text-slate-900 font-bold">{value}</span>
@@ -176,7 +176,7 @@ export default function EquipmentDetailPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
              <h2 className="text-xl font-black text-slate-900 mb-6">Media Gallery</h2>
              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-               {item.images.map((img, i) => (
+               {(item.images || []).map((img, i) => (
                  <div key={i} className="aspect-video rounded-xl bg-slate-50 border border-slate-100 overflow-hidden group relative">
                     <img src={img} alt={`${item.name} gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />

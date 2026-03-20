@@ -66,12 +66,24 @@ export default function AnalyticsPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const [stats, performance] = await Promise.all([
+        const [statsData, performanceData] = await Promise.all([
           dashboardService.getStats(),
-          dashboardService.getCompanyPerformance()
+          dashboardService.getCompanyPerformance(),
         ])
-        setData(stats)
-        setCompanies(performance)
+        
+        // Ensure all properties used in charts are arrays
+        const processedData = {
+          ...EMPTY_ANALYTICS_DATA,
+          ...statsData,
+          revenueTrend: Array.isArray(statsData?.revenueTrend) ? statsData.revenueTrend : [],
+          equipmentStatus: Array.isArray(statsData?.equipmentStatus) ? statsData.equipmentStatus : [],
+          categoryDistribution: Array.isArray(statsData?.categoryDistribution) ? statsData.categoryDistribution : [],
+          utilizationTrend: Array.isArray(statsData?.utilizationTrend) ? statsData.utilizationTrend : [],
+        }
+        setData(processedData)
+        
+        const performanceArray = Array.isArray(performanceData) ? performanceData : (performanceData as any)?.performance || (data as any)?.data || []
+        setCompanies(performanceArray)
       } catch (err: any) {
         setError(err.message || 'Failed to fetch analytics data')
       } finally {

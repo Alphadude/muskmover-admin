@@ -83,8 +83,20 @@ export default function Dashboard() {
           dashboardService.getStats(),
           dashboardService.getRecentActivity(),
         ])
-        setStats(statsData)
-        setActivity(activityData)
+        
+        // Ensure all properties used in charts are arrays
+        const processedStats = {
+          ...EMPTY_STATS,
+          ...statsData,
+          revenueTrend: Array.isArray(statsData?.revenueTrend) ? statsData.revenueTrend : [],
+          equipmentStatus: Array.isArray(statsData?.equipmentStatus) ? statsData.equipmentStatus : EMPTY_STATS.equipmentStatus,
+          categoryDistribution: Array.isArray(statsData?.categoryDistribution) ? statsData.categoryDistribution : [],
+          utilizationTrend: Array.isArray(statsData?.utilizationTrend) ? statsData.utilizationTrend : [],
+        }
+        setStats(processedStats)
+        
+        const activityArray = Array.isArray(activityData) ? activityData : (activityData as any)?.activity || (activityData as any)?.data || []
+        setActivity(activityArray)
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data')
       } finally {
