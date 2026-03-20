@@ -16,6 +16,7 @@ export const mockCompanies: MarineCompany[] = [
     contactEmail: 'info@atlanticmarine.ng',
     phone: '+234 701 234 5678',
     logo: '/companies/atlantic.png',
+    banner: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80',
     verificationStatus: 'verified',
     rating: 4.8,
     totalEquipment: 24,

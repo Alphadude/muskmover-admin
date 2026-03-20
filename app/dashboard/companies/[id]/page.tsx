@@ -213,8 +213,40 @@ export default function CompanyDetailPage() {
     <div className="space-y-10 pb-20">
 
       {/* Company Header Card */}
-      <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-border/50 p-10 shadow-soft glass">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-border/50 shadow-soft overflow-hidden glass">
+        {/* Banner Section */}
+        <div className="relative h-48 sm:h-64 w-full bg-slate-100">
+          {company.banner ? (
+            <img 
+              src={company.banner} 
+              alt={`${company.name} banner`} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+              <Package className="w-12 h-12 text-slate-300" />
+            </div>
+          )}
+          
+          {/* Logo Overlay */}
+          <div className="absolute -bottom-12 left-10 p-2 rounded-3xl bg-white shadow-xl border border-slate-100">
+            <div className="w-24 h-24 rounded-2xl bg-slate-50 overflow-hidden flex items-center justify-center p-2">
+              {company.logo ? (
+                <img 
+                  src={company.logo} 
+                  alt={`${company.name} logo`} 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-2xl font-black text-slate-200">
+                  {company.name.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-10 pt-16 grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Left side - Basic info */}
           <div className="lg:col-span-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

@@ -16,6 +16,7 @@ export interface MarineCompany {
   contactEmail: string
   phone: string
   logo?: string
+  banner?: string
   verificationStatus: CompanyVerificationStatus
   rating: number
   totalEquipment: number

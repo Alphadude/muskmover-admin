@@ -33,14 +33,37 @@ export default function AddCompanyPage() {
     description: '',
   })
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) setLogo(URL.createObjectURL(file))
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = (error) => reject(error)
+    })
   }
 
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) setBanner(URL.createObjectURL(file))
+    if (file) {
+      try {
+        const base64 = await fileToBase64(file)
+        setLogo(base64)
+      } catch (err) {
+        toast.error('Failed to process logo')
+      }
+    }
+  }
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      try {
+        const base64 = await fileToBase64(file)
+        setBanner(base64)
+      } catch (err) {
+        toast.error('Failed to process banner')
+      }
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +73,7 @@ export default function AddCompanyPage() {
       await companyService.create({
         ...formData,
         logo: logo || undefined,
+        banner: banner || undefined,
         verificationStatus: 'pending',
         rating: 0,
         totalEquipment: 0,
