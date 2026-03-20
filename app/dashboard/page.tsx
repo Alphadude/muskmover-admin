@@ -52,8 +52,25 @@ const categoryData = [
   { name: 'Safety', count: 8 },
 ]
 
+const EMPTY_STATS: DashboardData = {
+  totalCompanies: 0,
+  totalEquipment: 0,
+  activeOrders: 0,
+  monthlyRevenue: 0,
+  pendingVerifications: 0,
+  averageRating: 0,
+  revenueTrend: [],
+  equipmentStatus: [
+    { name: 'Available', value: 0, fill: '#00c853' },
+    { name: 'Rented', value: 0, fill: '#1e90ff' },
+    { name: 'Maintenance', value: 0, fill: '#ff9800' },
+  ],
+  categoryDistribution: [],
+  utilizationTrend: [],
+}
+
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardData | null>(null)
+  const [stats, setStats] = useState<DashboardData>(EMPTY_STATS)
   const [activity, setActivity] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -95,20 +112,8 @@ export default function Dashboard() {
     )
   }
 
-  if (error || !stats) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto">
-        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-          <AlertCircle className="w-8 h-8 text-destructive" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Failed to load analytics</h2>
-          <p className="text-muted-foreground mt-2">{error || 'Something went wrong while fetching the dashboard data.'}</p>
-        </div>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
-      </div>
-    )
-  }
+  // We no longer return early on error to allow the page to show empty stats
+
 
   return (
     <div className="space-y-6">

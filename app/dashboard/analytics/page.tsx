@@ -43,8 +43,21 @@ const companyPerformance = [
   { name: 'Maritime Safety', revenue: 2180000, orders: 118, rating: 4.7 },
 ]
 
+const EMPTY_ANALYTICS_DATA: DashboardData = {
+  totalCompanies: 0,
+  totalEquipment: 0,
+  activeOrders: 0,
+  monthlyRevenue: 0,
+  pendingVerifications: 0,
+  averageRating: 0,
+  revenueTrend: [],
+  equipmentStatus: [],
+  categoryDistribution: [],
+  utilizationTrend: [],
+}
+
 export default function AnalyticsPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
+  const [data, setData] = useState<DashboardData>(EMPTY_ANALYTICS_DATA)
   const [companies, setCompanies] = useState<CompanyPerformance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -77,20 +90,8 @@ export default function AnalyticsPage() {
     )
   }
 
-  if (error || !data) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
-        <div className="bg-destructive/10 p-3 rounded-full">
-          <TrendingUp className="w-8 h-8 text-destructive" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold">Analytics Unavailable</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">{error || 'Unable to connect to analytics engine'}</p>
-        </div>
-        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
-      </div>
-    )
-  }
+  // No longer returning early on error to show empty analytics charts
+
 
   return (
     <div className="space-y-6">
