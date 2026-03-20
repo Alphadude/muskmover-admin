@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { equipmentService } from '@/lib/services/equipment'
 import { companyService } from '@/lib/services/company'
 import { MarineCompany } from '@/lib/types'
+import { SuccessModal } from '@/components/ui/success-modal'
 
 type Tab = 'equipment' | 'vessel'
 
@@ -24,6 +25,7 @@ export default function AddEquipmentPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [images, setImages] = useState<string[]>([])
   const [companies, setCompanies] = useState<MarineCompany[]>([])
 
@@ -62,7 +64,7 @@ export default function AddEquipmentPage() {
       
       await equipmentService.create({
         name: data.name as string,
-        category: data.category as string || activeTab,
+        category: (activeTab === 'vessel' ? 'vessels' : data.category) as EquipmentCategory,
         companyId: data.companyId as string,
         description: data.description as string,
         availability: data.availability as string || 'available',
@@ -71,16 +73,13 @@ export default function AddEquipmentPage() {
         hourlyRate: Number(data.hourlyRate) || 0,
         dailyRate: Number(data.dailyRate) || 0,
         monthlyRate: Number(data.monthlyRate) || 0,
-        specifications: {},
+        specifications: activeTab === 'vessel' ? { vesselType: data.category as string } : {},
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as any)
 
-      toast.success(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} added successfully!`, {
-        description: 'The new asset has been listed in the marketplace.',
-      })
-      router.push('/dashboard/equipment')
-      router.refresh()
+      setShowSuccess(true)
+      toast.success(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} added successfully!`)
     } catch (err: any) {
       toast.error(err.message || 'Failed to create asset')
     } finally {
@@ -389,6 +388,24 @@ export default function AddEquipmentPage() {
         </div>
 
       </form>
+
+      <SuccessModal 
+        isOpen={showSuccess}
+        onClose={() => {
+          setShowSuccess(false)
+          router.push('/dashboard/equipment')
+        }}
+        title={`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} Added!`}
+        message={`Your new ${activeTab} has been successfully registered in the marketplace inventory.`}
+        actionLabel="View All Assets"
+        onAction={() => router.push('/dashboard/equipment')}
+        secondaryActionLabel={`Add Another ${activeTab === 'vessel' ? 'Vessel' : 'Asset'}`}
+        onSecondaryAction={() => {
+          setShowSuccess(false)
+          // Reset form or stay on page
+          window.location.reload()
+        }}
+      />
     </div>
   )
 }

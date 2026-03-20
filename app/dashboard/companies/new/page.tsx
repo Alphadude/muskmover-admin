@@ -15,10 +15,12 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { companyService } from '@/lib/services/company'
+import { SuccessModal } from '@/components/ui/success-modal'
 
 export default function AddCompanyPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [logo, setLogo] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -56,11 +58,8 @@ export default function AddCompanyPage() {
         joinedDate: new Date(),
       })
       
-      toast.success('Company created successfully!', {
-        description: `${formData.name} has been added to the system.`,
-      })
-      router.push('/dashboard/companies')
-      router.refresh()
+      setShowSuccess(true)
+      toast.success('Company created successfully!')
     } catch (err: any) {
       toast.error(err.message || 'Failed to create company')
     } finally {
@@ -269,6 +268,33 @@ export default function AddCompanyPage() {
           </Button>
         </div>
       </form>
+
+      <SuccessModal 
+        isOpen={showSuccess}
+        onClose={() => {
+          setShowSuccess(false)
+          router.push('/dashboard/companies')
+        }}
+        title="Company Registered!"
+        message={`${formData.name} has been successfully added to the MuskMover directory.`}
+        actionLabel="View All Companies"
+        onAction={() => router.push('/dashboard/companies')}
+        secondaryActionLabel="Add Another Company"
+        onSecondaryAction={() => {
+          setShowSuccess(false)
+          setFormData({
+            name: '',
+            contactEmail: '',
+            phone: '',
+            country: 'ng',
+            location: '',
+            postalCode: '',
+            description: '',
+          })
+          setLogo(null)
+          setBanner(null)
+        }}
+      />
     </div>
   )
 }

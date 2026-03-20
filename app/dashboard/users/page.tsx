@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,10 +40,10 @@ import {
 } from '@/components/ui/select'
 import { userService } from '@/lib/services/user'
 import { AdminUser, UserRole, UserStatus } from '@/lib/types'
-import { useEffect } from 'react'
 import { toast } from 'sonner'
 
 export default function UsersPage() {
+  const router = useRouter()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -214,7 +215,10 @@ export default function UsersPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem className="gap-2 text-sm">
+            <DropdownMenuItem 
+              className="gap-2 text-sm"
+              onClick={() => router.push(`/dashboard/users/${item.id}`)}
+            >
               <Eye className="w-3.5 h-3.5" /> View
             </DropdownMenuItem>
             <DropdownMenuItem 

@@ -125,9 +125,26 @@ export default function NotificationsPage() {
             <Button variant="outline" onClick={fetchNotifications}>Try Again</Button>
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="p-20 text-center space-y-4">
-            <Bell className="w-12 h-12 text-slate-300 mx-auto" />
-            <p className="text-slate-500 font-medium">No notifications found.</p>
+          <div className="p-24 flex flex-col items-center justify-center text-center space-y-5 bg-slate-50/20">
+            <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-300 shadow-sm border border-slate-200/50">
+              <Bell className="w-10 h-10" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">All Caught Up!</h3>
+              <p className="text-sm font-medium text-slate-400 max-w-[240px] mx-auto leading-relaxed">
+                You have no notifications at the moment. Check back later for updates.
+              </p>
+            </div>
+            {searchTerm && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSearchTerm('')}
+                className="rounded-xl border-slate-200 text-slate-500 font-bold px-6 h-10"
+              >
+                Clear Search
+              </Button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
