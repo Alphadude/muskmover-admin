@@ -29,15 +29,19 @@ export default function LoginPage() {
     try {
       const response = await authService.login({ email, password })
       
-      // Store auth token and user details
-      sessionStorage.setItem('authToken', response.token)
-      
-      // Defensive check for admin data in response
-      const adminData = response.admin || (response as any).user || (response as any).data || response
-      sessionStorage.setItem('userEmail', adminData.email || '')
-      sessionStorage.setItem('userName', adminData.name || '')
-      
-      router.push('/dashboard')
+      // Robust extraction of token and user data
+      const responseData = (response as any).data || response
+      const token = responseData.token || (response as any).token
+      const userData = responseData.admin || responseData.user || responseData
+
+      if (token) {
+        sessionStorage.setItem('authToken', token)
+        sessionStorage.setItem('userEmail', userData.email || email)
+        sessionStorage.setItem('userName', userData.name || 'Admin User')
+        router.push('/dashboard')
+      } else {
+        throw new Error('Authentication failed: No token received from server.')
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.')
       setIsLoading(false)
