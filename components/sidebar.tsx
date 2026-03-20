@@ -12,8 +12,10 @@ import {
   Menu,
   X,
   Anchor,
+  User,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { authService } from '@/lib/services/auth'
 
 interface NavItem {
   href: string
@@ -68,11 +70,22 @@ export function Sidebar() {
   const toggleMenu = () => setIsOpen(!isOpen)
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const name = sessionStorage.getItem('userName') || 'Admin User'
-      const email = sessionStorage.getItem('userEmail') || ''
-      setUserData(prev => ({ ...prev, name, email }))
+    const fetchUserData = async () => {
+      try {
+        const data = await authService.getMe()
+        setUserData({
+          name: data.name,
+          email: data.email,
+          role: data.role.charAt(0).toUpperCase() + data.role.slice(1)
+        })
+      } catch (err) {
+        // Fallback to session storage if API fails
+        const name = sessionStorage.getItem('userName') || 'Admin User'
+        const email = sessionStorage.getItem('userEmail') || ''
+        setUserData(prev => ({ ...prev, name, email }))
+      }
     }
+    fetchUserData()
   }, [])
 
   const handleSignOut = () => {
@@ -151,10 +164,21 @@ export function Sidebar() {
 
           {/* User section */}
           <div className="border-t border-border p-4 space-y-3">
-            <div className="px-4 py-3 rounded-lg bg-accent/10">
-              <p className="text-sm font-medium text-foreground">{userData.name}</p>
-              <p className="text-xs text-muted-foreground">{userData.role}</p>
-            </div>
+            <Link 
+              href="/dashboard/profile"
+              onClick={() => setIsOpen(false)}
+              className="block px-4 py-3 rounded-lg bg-accent/10 hover:bg-accent/20 transition-all border border-transparent hover:border-primary/20 group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground truncate max-w-[140px]">{userData.name || 'Loading...'}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{userData.role}</p>
+                </div>
+              </div>
+            </Link>
             <button 
               onClick={handleSignOut}
               className="w-full flex items-center gap-3 px-4 py-2 text-foreground hover:bg-accent/10 rounded-lg transition-colors text-sm font-medium"

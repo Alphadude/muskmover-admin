@@ -36,6 +36,7 @@ export default function LoginPage() {
 
       if (token) {
         sessionStorage.setItem('authToken', token)
+        sessionStorage.setItem('adminId', userData.id || '')
         sessionStorage.setItem('userEmail', userData.email || email)
         sessionStorage.setItem('userName', userData.name || 'Admin User')
         router.push('/dashboard')

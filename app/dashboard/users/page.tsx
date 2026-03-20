@@ -50,6 +50,14 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [isAddingUser, setIsAddingUser] = useState(false)
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'manager' as UserRole,
+  })
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -71,6 +79,27 @@ export default function UsersPage() {
   const handleEditUser = (user: AdminUser) => {
     setEditingUser({ ...user })
     setIsEditDialogOpen(true)
+  }
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setIsAddingUser(true)
+      const data: any = await userService.create({
+        ...newUser,
+        status: 'active' as UserStatus,
+      })
+      
+      const createdUser = data.admin || data.data || data
+      setUsers(prev => [...prev, createdUser])
+      setIsAddUserOpen(false)
+      setNewUser({ name: '', email: '', password: '', role: 'manager' })
+      toast.success('User created successfully')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create user')
+    } finally {
+      setIsAddingUser(false)
+    }
   }
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -177,7 +206,7 @@ export default function UsersPage() {
       key: 'actions' as const,
       label: '',
       width: '8%',
-      render: () => (
+      render: (_: any, item: AdminUser) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700">
@@ -218,7 +247,10 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Admin Users</h1>
           <p className="text-slate-400 mt-0.5 text-sm">Manage team access and permission levels.</p>
         </div>
-        <Button className="gap-2 h-9 px-4 rounded-lg bg-[#050B20] hover:bg-[#050B20]/90 text-white text-sm font-medium">
+        <Button 
+          onClick={() => setIsAddUserOpen(true)}
+          className="gap-2 h-9 px-4 rounded-lg bg-[#050B20] hover:bg-[#050B20]/90 text-white text-sm font-medium"
+        >
           <Plus className="w-3.5 h-3.5" />
           Add User
         </Button>
@@ -312,6 +344,81 @@ export default function UsersPage() {
           ))}
         </div>
       </div>
+
+      {/* Add User Modal */}
+      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new administrator account with specific roles.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateUser} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-name">Full Name</Label>
+              <Input
+                id="new-name"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                placeholder="e.g. Samuel Adekunle"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Email Address</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                placeholder="samuel@muskmover.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Initial Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                placeholder="••••••••"
+                required
+              />
+              <p className="text-[10px] text-muted-foreground">User can change this after their first login.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-role">System Role</Label>
+              <Select
+                value={newUser.role}
+                onValueChange={(value: UserRole) => setNewUser({ ...newUser, role: value })}
+              >
+                <SelectTrigger id="new-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin (Full Access)</SelectItem>
+                  <SelectItem value="manager">Manager (Operations)</SelectItem>
+                  <SelectItem value="viewer">Viewer (Read Only)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsAddUserOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isAddingUser}>
+                {isAddingUser ? 'Creating...' : 'Create Account'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Modal */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
