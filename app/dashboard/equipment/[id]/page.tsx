@@ -17,26 +17,70 @@ import {
   Edit,
   ShoppingCart,
 } from 'lucide-react'
-import { mockEquipment, mockCompanies } from '@/lib/mock-data'
+import { equipmentService } from '@/lib/services/equipment'
+import { companyService } from '@/lib/services/company'
+import { Equipment, MarineCompany } from '@/lib/types'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 export default function EquipmentDetailPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
+  const [item, setItem] = useState<Equipment | null>(null)
+  const [company, setCompany] = useState<MarineCompany | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const item = mockEquipment.find((e) => e.id === id)
-  const company = item ? mockCompanies.find((c) => c.id === item.companyId) : null
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const asset = await equipmentService.getById(id)
+        setItem(asset)
+        
+        if (asset.companyId) {
+          const companyData = await companyService.getById(asset.companyId)
+          setCompany(companyData)
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch asset details')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  if (!item) {
+    if (id) {
+      fetchData()
+    }
+  }, [id])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-muted-foreground">Loading asset details...</p>
+      </div>
+    )
+  }
+
+  if (error || !item) {
     return (
       <div className="space-y-6">
-        <Header title="Asset Not Found" />
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            The equipment you are looking for does not exist.
-          </p>
-          <Button onClick={() => router.back()}>Go Back</Button>
+        <div className="text-center py-20 bg-white rounded-2xl border border-destructive/10 shadow-sm space-y-6">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+            <Package className="w-8 h-8 text-destructive" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Oops! Asset Not Found</h2>
+            <p className="text-muted-foreground max-w-md mx-auto mt-2">
+              {error || 'The equipment you are looking for does not exist or could not be loaded.'}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
         </div>
       </div>
     )

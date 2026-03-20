@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   BarChart3,
   Users,
@@ -13,7 +13,7 @@ import {
   X,
   Anchor,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface NavItem {
   href: string
@@ -61,9 +61,26 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [userData, setUserData] = useState({ name: '', email: '', role: 'Administrator' })
 
   const toggleMenu = () => setIsOpen(!isOpen)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const name = sessionStorage.getItem('userName') || 'Admin User'
+      const email = sessionStorage.getItem('userEmail') || ''
+      setUserData(prev => ({ ...prev, name, email }))
+    }
+  }, [])
+
+  const handleSignOut = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.clear()
+      router.push('/auth/login')
+    }
+  }
 
   return (
     <>
@@ -135,10 +152,13 @@ export function Sidebar() {
           {/* User section */}
           <div className="border-t border-border p-4 space-y-3">
             <div className="px-4 py-3 rounded-lg bg-accent/10">
-              <p className="text-sm font-medium text-foreground">Chioma Okoro</p>
-              <p className="text-xs text-muted-foreground">Administrator</p>
+              <p className="text-sm font-medium text-foreground">{userData.name}</p>
+              <p className="text-xs text-muted-foreground">{userData.role}</p>
             </div>
-            <button className="w-full flex items-center gap-3 px-4 py-2 text-foreground hover:bg-accent/10 rounded-lg transition-colors text-sm font-medium">
+            <button 
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-2 text-foreground hover:bg-accent/10 rounded-lg transition-colors text-sm font-medium"
+            >
               <LogOut className="w-4 h-4" />
               Sign Out
             </button>

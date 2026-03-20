@@ -98,3 +98,15 @@ export interface Dashboard {
   pendingVerifications: number
   averageRating: number
 }
+
+export interface PlatformSettings {
+  name: string
+  email: string
+  phone: string
+  commissionRate: number
+  minOrderValue: number
+  verificationRequirements: string[]
+  sessionTimeout: number
+  maxLoginAttempts: number
+  require2FA: boolean
+}

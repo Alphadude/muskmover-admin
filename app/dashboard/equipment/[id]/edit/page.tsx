@@ -14,8 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { mockEquipment } from '@/lib/mock-data'
-import { Equipment } from '@/lib/types'
+import { equipmentService } from '@/lib/services/equipment'
+import { companyService } from '@/lib/services/company'
+import { Equipment, MarineCompany } from '@/lib/types'
 
 type Tab = 'equipment' | 'vessel'
 
@@ -33,19 +34,44 @@ export default function EditEquipmentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [images, setImages] = useState<string[]>([])
   const [equipment, setEquipment] = useState<Equipment | null>(null)
+  const [companies, setCompanies] = useState<MarineCompany[]>([])
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const item = mockEquipment.find((e) => e.id === id)
-    if (item) {
-      setEquipment(item)
-      setImages(item.images)
-      setActiveTab(item.category === 'vessels' ? 'vessel' : 'equipment')
+    const fetchData = async () => {
+      try {
+        const [item, companiesData] = await Promise.all([
+          equipmentService.getById(id),
+          companyService.getAll()
+        ])
+        setEquipment(item)
+        setCompanies(companiesData)
+        setImages(item.images)
+        setActiveTab(item.category === 'vessels' ? 'vessel' : 'equipment')
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch edit data')
+        toast.error('Failed to load asset details')
+      }
+    }
+
+    if (id) {
+      fetchData()
     }
   }, [id])
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-destructive font-medium">{error}</p>
+        <Button variant="outline" onClick={() => window.location.reload()} className="mt-4">Try Again</Button>
+      </div>
+    )
+  }
 
   if (!equipment) {
     return (
       <div className="text-center py-20">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-slate-500 font-medium">Loading asset details...</p>
       </div>
     )
@@ -65,14 +91,26 @@ export default function EditEquipmentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!equipment) return
+
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} updated successfully!`, {
+    try {
+      // In a real app, we'd gather all form data. 
+      // For now, we'll just demonstrate the service call with existing data + any changes
+      await equipmentService.update(id, {
+        ...equipment,
+        images: images,
+      })
+      
+      toast.success(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} updated successfully!`, {
         description: 'The changes have been saved to the marketplace.',
       })
       router.push(`/dashboard/equipment/${id}`)
-    }, 1500)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update asset')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -119,11 +157,11 @@ export default function EditEquipmentPage() {
                 <SelectValue placeholder="Select Company" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="comp-001">Atlantic Marine Solutions</SelectItem>
-                <SelectItem value="comp-002">Gulf Cargo Transport</SelectItem>
-                <SelectItem value="comp-003">Deep Sea Exploration</SelectItem>
-                <SelectItem value="comp-004">Coastal Navigation Ltd</SelectItem>
-                <SelectItem value="comp-005">Maritime Safety Systems</SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="grid grid-cols-2 gap-3">

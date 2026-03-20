@@ -21,17 +21,38 @@ import {
   Search,
   Filter,
 } from 'lucide-react'
-import { mockAdminUsers } from '@/lib/mock-data'
+import { userService } from '@/lib/services/user'
 import { AdminUser } from '@/lib/types'
+import { useEffect } from 'react'
 
 export default function UsersPage() {
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true)
+        const data = await userService.getAll()
+        const usersArray = Array.isArray(data) ? data : (data as any)?.users || (data as any)?.data || []
+        setUsers(usersArray)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch users')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, [])
+
   const filteredUsers = useMemo(() =>
-    mockAdminUsers.filter(u =>
+    users.filter(u =>
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [searchTerm])
+    ), [users, searchTerm])
 
   const getRoleBadge = (role: string) => {
     const styles: Record<string, string> = {
@@ -105,7 +126,7 @@ export default function UsersPage() {
       ),
     },
     {
-      key: 'id' as const,
+      key: 'actions' as const,
       label: '',
       width: '8%',
       render: () => (
@@ -132,11 +153,11 @@ export default function UsersPage() {
   ]
 
   const roleStats = {
-    admin: mockAdminUsers.filter(u => u.role === 'admin').length,
-    manager: mockAdminUsers.filter(u => u.role === 'manager').length,
-    viewer: mockAdminUsers.filter(u => u.role === 'viewer').length,
+    admin: users.filter(u => u.role === 'admin').length,
+    manager: users.filter(u => u.role === 'manager').length,
+    viewer: users.filter(u => u.role === 'viewer').length,
   }
-  const activeUsers = mockAdminUsers.filter(u => u.status === 'active').length
+  const activeUsers = users.filter(u => u.status === 'active').length
 
   return (
     <div className="space-y-6 pb-10">
@@ -155,7 +176,7 @@ export default function UsersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Users', value: mockAdminUsers.length, color: 'bg-slate-900' },
+          { label: 'Total Users', value: users.length, color: 'bg-slate-900' },
           { label: 'Administrators', value: roleStats.admin, color: 'bg-[#050B20]' },
           { label: 'Managers', value: roleStats.manager, color: 'bg-blue-500' },
           { label: 'Active Now', value: activeUsers, color: 'bg-emerald-500' },
@@ -191,13 +212,37 @@ export default function UsersPage() {
           </div>
         </div>
 
-        <DataTable
-          data={filteredUsers}
-          columns={columns}
-          totalItems={mockAdminUsers.length}
-          itemsPerPage={10}
-          totalPages={Math.ceil(mockAdminUsers.length / 10)}
-        />
+        {isLoading ? (
+          <div className="p-20 flex flex-col items-center justify-center space-y-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-medium text-muted-foreground">Loading team members...</p>
+          </div>
+        ) : error ? (
+          <div className="p-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-destructive rotate-45" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-foreground">Something went wrong</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">{error}</p>
+            </div>
+            <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-2"
+            >
+                Try Again
+            </Button>
+          </div>
+        ) : (
+          <DataTable
+            data={filteredUsers}
+            columns={columns}
+            totalItems={users.length}
+            itemsPerPage={10}
+            totalPages={Math.ceil(users.length / 10)}
+          />
+        )}
       </div>
 
       {/* Role Permissions */}

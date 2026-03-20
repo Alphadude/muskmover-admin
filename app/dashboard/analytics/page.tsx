@@ -15,11 +15,10 @@ import {
   AreaChart,
   Area,
 } from 'recharts'
-import {
-  Download,
-  TrendingUp,
-  Calendar,
-} from 'lucide-react'
+import { dashboardService, CompanyPerformance, DashboardData } from '@/lib/services/dashboard'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { TrendingUp, Download } from 'lucide-react'
 
 const revenueData = [
   { month: 'Jan', revenue: 2400000, target: 2500000, growth: 12 },
@@ -45,6 +44,54 @@ const companyPerformance = [
 ]
 
 export default function AnalyticsPage() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [companies, setCompanies] = useState<CompanyPerformance[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [stats, performance] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getCompanyPerformance()
+        ])
+        setData(stats)
+        setCompanies(performance)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch analytics data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-muted-foreground">Generating reports...</p>
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
+        <div className="bg-destructive/10 p-3 rounded-full">
+          <TrendingUp className="w-8 h-8 text-destructive" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold">Analytics Unavailable</h3>
+          <p className="text-sm text-muted-foreground max-w-xs">{error || 'Unable to connect to analytics engine'}</p>
+        </div>
+        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
 
@@ -94,14 +141,16 @@ export default function AnalyticsPage() {
                 fill="url(#colorRevenue)"
                 name="Actual Revenue"
               />
-              <Line
-                type="monotone"
-                dataKey="target"
-                stroke="#00c853"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                name="Target Revenue"
-              />
+              {data.revenueTrend.some(r => r.target) && (
+                <Line
+                  type="monotone"
+                  dataKey="target"
+                  stroke="#00c853"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Target Revenue"
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -113,7 +162,7 @@ export default function AnalyticsPage() {
               Growth Rate
             </h3>
           </div>
-          {revenueData.slice(-3).map((item) => (
+          {data.revenueTrend.slice(-3).reverse().map((item) => (
             <div
               key={item.month}
               className="flex items-start justify-between p-3 rounded-lg bg-background border border-border/50"
@@ -126,12 +175,14 @@ export default function AnalyticsPage() {
                   ₦{(item.revenue / 1000000).toFixed(1)}M
                 </p>
               </div>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="font-semibold text-green-500 text-sm">
-                  +{item.growth}%
-                </span>
-              </div>
+              {item.growth !== undefined && (
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <span className="font-semibold text-green-500 text-sm">
+                    +{item.growth}%
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -148,7 +199,7 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={equipmentUtilization}>
+          <BarChart data={data.utilizationTrend || []}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="week" stroke="var(--muted-foreground)" />
             <YAxis stroke="var(--muted-foreground)" />
@@ -160,8 +211,8 @@ export default function AnalyticsPage() {
               }}
             />
             <Legend />
-            <Bar dataKey="utilization" fill="#1e90ff" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="availability" fill="#00c853" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="utilization" fill="#1e90ff" radius={[8, 8, 0, 0]} name="In Use %" />
+            <Bar dataKey="availability" fill="#00c853" radius={[8, 8, 0, 0]} name="Available %" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -180,48 +231,48 @@ export default function AnalyticsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
                   Company
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
                   Revenue
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
                   Orders
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
                   Rating
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
                   Growth
                 </th>
               </tr>
             </thead>
             <tbody>
-              {companyPerformance.map((company, index) => (
+              {companies.map((company) => (
                 <tr
                   key={company.name}
                   className="border-b border-border last:border-b-0 hover:bg-accent/5 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <p className="font-medium text-foreground">{company.name}</p>
+                    <p className="font-medium text-foreground text-left">{company.name}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-foreground">
+                    <p className="text-foreground text-left">
                       ₦{(company.revenue / 1000000).toFixed(1)}M
                     </p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-foreground">{company.orders}</p>
+                    <p className="text-foreground text-left">{company.orders}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-medium text-foreground">
+                    <p className="font-medium text-foreground text-left">
                       {company.rating}
                     </p>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-green-500 font-semibold">
-                      +{15 + index * 5}%
+                    <span className="text-green-500 font-semibold text-left">
+                      +{company.growth}%
                     </span>
                   </td>
                 </tr>

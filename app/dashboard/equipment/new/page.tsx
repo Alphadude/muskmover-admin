@@ -14,6 +14,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { equipmentService } from '@/lib/services/equipment'
+import { companyService } from '@/lib/services/company'
+import { MarineCompany } from '@/lib/types'
+import { useEffect } from 'react'
 
 type Tab = 'equipment' | 'vessel'
 
@@ -27,6 +31,19 @@ export default function AddEquipmentPage() {
   const [activeTab, setActiveTab] = useState<Tab>('equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [images, setImages] = useState<string[]>([])
+  const [companies, setCompanies] = useState<MarineCompany[]>([])
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const data = await companyService.getAll()
+        setCompanies(data)
+      } catch (err) {
+        toast.error('Failed to load companies')
+      }
+    }
+    fetchCompanies()
+  }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -43,13 +60,36 @@ export default function AddEquipmentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} added successfully!`, {
+    
+    try {
+      const formData = new FormData(e.currentTarget as HTMLFormElement)
+      const data = Object.fromEntries(formData.entries())
+      
+      await equipmentService.create({
+        name: data.name as string,
+        category: data.category as string || activeTab,
+        companyId: data.companyId as string,
+        description: data.description as string,
+        availability: 'available',
+        condition: 'excellent',
+        images: images,
+        hourlyRate: Number(data.hourlyRate) || 0,
+        dailyRate: Number(data.dailyRate) || 0,
+        monthlyRate: Number(data.monthlyRate) || 0,
+        specifications: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any)
+
+      toast.success(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} added successfully!`, {
         description: 'The new asset has been listed in the marketplace.',
       })
       router.push('/dashboard/equipment')
-    }, 1500)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create asset')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -110,11 +150,11 @@ export default function AddEquipmentPage() {
                 <SelectValue placeholder="Select Company" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="comp-001">Atlantic Marine Solutions</SelectItem>
-                <SelectItem value="comp-002">Gulf Cargo Transport</SelectItem>
-                <SelectItem value="comp-003">Deep Sea Exploration</SelectItem>
-                <SelectItem value="comp-004">Coastal Navigation Ltd</SelectItem>
-                <SelectItem value="comp-005">Maritime Safety Systems</SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="grid grid-cols-2 gap-3">

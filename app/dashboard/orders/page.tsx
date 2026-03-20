@@ -25,16 +25,51 @@ import {
   Plus,
   Columns,
 } from 'lucide-react'
-import { mockOrders, mockEquipment, mockCompanies } from '@/lib/mock-data'
-import { Order } from '@/lib/types'
+import { orderService } from '@/lib/services/order'
+import { equipmentService } from '@/lib/services/equipment'
+import { companyService } from '@/lib/services/company'
+import { Order, Equipment, MarineCompany } from '@/lib/types'
+import { useEffect } from 'react'
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
+  const [companies, setCompanies] = useState<MarineCompany[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<keyof Order>('startDate')
+  const [sortBy, setSortBy] = useState<keyof Order | 'actions'>('startDate')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [ordersData, equipmentData, companiesData] = await Promise.all([
+          orderService.getAll(),
+          equipmentService.getAll(),
+          companyService.getAll()
+        ])
+        
+        const ordersArray = Array.isArray(ordersData) ? ordersData : (ordersData as any)?.orders || (ordersData as any)?.data || []
+        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || []
+        const companiesArray = Array.isArray(companiesData) ? companiesData : (companiesData as any)?.companies || (companiesData as any)?.data || []
+        
+        setOrders(ordersArray)
+        setEquipmentList(equipmentArray)
+        setCompanies(companiesArray)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch bookings data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
   const filteredOrders = useMemo(() => {
-    return mockOrders
+    return orders
       .filter((order) => {
         const matchesSearch =
           order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -42,8 +77,9 @@ export default function OrdersPage() {
         return matchesSearch
       })
       .sort((a, b) => {
-        const aValue = a[sortBy]
-        const bValue = b[sortBy]
+        if (sortBy === 'actions') return 0
+        const aValue = a[sortBy as keyof Order]
+        const bValue = b[sortBy as keyof Order]
 
         if (aValue instanceof Date && bValue instanceof Date) {
           return sortDirection === 'asc'
@@ -63,7 +99,7 @@ export default function OrdersPage() {
       })
   }, [searchTerm, sortBy, sortDirection])
 
-  const handleSort = (key: keyof Order) => {
+  const handleSort = (key: keyof Order | 'actions') => {
     if (sortBy === key) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -73,17 +109,13 @@ export default function OrdersPage() {
   }
 
   const getEquipmentName = (equipmentId: string) => {
-    return mockEquipment.find((e) => e.id === equipmentId)?.name || 'Unknown'
+    return equipmentList.find((e) => e.id === equipmentId)?.name || 'Unknown'
   }
 
   const getCompanyName = (companyId: string) => {
-    return mockCompanies.find((c) => c.id === companyId)?.name || 'Unknown'
+    return companies.find((c) => c.id === companyId)?.name || 'Unknown'
   }
 
-  const statuses = Array.from(new Set(mockOrders.map((o) => o.status)))
-  const paymentStatuses = Array.from(
-    new Set(mockOrders.map((o) => o.paymentStatus))
-  )
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -198,7 +230,7 @@ export default function OrdersPage() {
       ),
     },
     {
-      key: 'id' as const,
+      key: 'actions' as const,
       label: 'Actions',
       width: '8%',
       render: () => (
@@ -221,10 +253,10 @@ export default function OrdersPage() {
     },
   ]
 
-  const totalRevenue = mockOrders.reduce((sum, o) => sum + o.totalPrice, 0)
-  const activeOrders = mockOrders.filter((o) => o.status === 'active').length
-  const pendingOrders = mockOrders.filter((o) => o.status === 'pending').length
-  const completedOrders = mockOrders.filter(
+  const totalRevenue = orders.reduce((sum, o) => sum + o.totalPrice, 0)
+  const activeOrders = orders.filter((o) => o.status === 'active').length
+  const pendingOrders = orders.filter((o) => o.status === 'pending').length
+  const completedOrders = orders.filter(
     (o) => o.status === 'completed'
   ).length
 
@@ -251,7 +283,7 @@ export default function OrdersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Orders', value: mockOrders.length, color: 'bg-slate-900' },
+          { label: 'Total Orders', value: orders.length, color: 'bg-slate-900' },
           { label: 'Total Revenue', value: `₦${(totalRevenue/1000000).toFixed(1)}M`, color: 'bg-emerald-500' },
           { label: 'Active', value: activeOrders, color: 'bg-blue-500' },
           { label: 'Completed', value: completedOrders, color: 'bg-violet-500' },
@@ -292,17 +324,41 @@ export default function OrdersPage() {
         </div>
 
         {/* Data Table */}
-        <DataTable
-          data={filteredOrders}
-          columns={columns}
-          sortBy={sortBy}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          totalItems={mockOrders.length}
-          itemsPerPage={10}
-          totalPages={Math.ceil(mockOrders.length / 10)}
-          onRowClick={(item) => console.log('Row clicked', item.id)}
-        />
+        {isLoading ? (
+          <div className="p-20 flex flex-col items-center justify-center space-y-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-medium text-muted-foreground">Loading transaction data...</p>
+          </div>
+        ) : error ? (
+          <div className="p-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-destructive rotate-45" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-foreground">Something went wrong</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">{error}</p>
+            </div>
+            <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-2"
+            >
+                Try Again
+            </Button>
+          </div>
+        ) : (
+          <DataTable
+            data={filteredOrders}
+            columns={columns}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            totalItems={orders.length}
+            itemsPerPage={10}
+            totalPages={Math.ceil(orders.length / 10)}
+            onRowClick={(item) => {}}
+          />
+        )}
       </div>
 
       {/* Pending Alert */}

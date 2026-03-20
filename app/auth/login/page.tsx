@@ -31,8 +31,11 @@ export default function LoginPage() {
       
       // Store auth token and user details
       sessionStorage.setItem('authToken', response.token)
-      sessionStorage.setItem('userEmail', response.admin.email)
-      sessionStorage.setItem('userName', response.admin.name)
+      
+      // Defensive check for admin data in response
+      const adminData = response.admin || (response as any).user || (response as any).data || response
+      sessionStorage.setItem('userEmail', adminData.email || '')
+      sessionStorage.setItem('userName', adminData.name || '')
       
       router.push('/dashboard')
     } catch (err: any) {

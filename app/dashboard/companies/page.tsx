@@ -27,24 +27,46 @@ import {
   Columns,
   Filter,
 } from 'lucide-react'
-import { mockCompanies } from '@/lib/mock-data'
+import { companyService } from '@/lib/services/company'
 import { MarineCompany } from '@/lib/types'
+import { useEffect } from 'react'
 
 export default function CompaniesPage() {
   const router = useRouter()
+  const [companies, setCompanies] = useState<MarineCompany[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<keyof MarineCompany>('name')
+  const [sortBy, setSortBy] = useState<keyof MarineCompany | 'actions'>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setIsLoading(true)
+        const data = await companyService.getAll()
+        const companiesArray = Array.isArray(data) ? data : (data as any)?.companies || (data as any)?.data || []
+        setCompanies(companiesArray)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch companies')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCompanies()
+  }, [])
+
   const filteredCompanies = useMemo(() => {
-    return mockCompanies
+    return companies
       .filter((company) =>
         company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.location.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .sort((a, b) => {
-        const aValue = a[sortBy]
-        const bValue = b[sortBy]
+        if (sortBy === 'actions') return 0
+        const aValue = a[sortBy as keyof MarineCompany]
+        const bValue = b[sortBy as keyof MarineCompany]
 
         if (typeof aValue === 'string') {
           return sortDirection === 'asc'
@@ -57,7 +79,7 @@ export default function CompaniesPage() {
       })
   }, [searchTerm, sortBy, sortDirection])
 
-  const handleSort = (key: keyof MarineCompany) => {
+  const handleSort = (key: keyof MarineCompany | 'actions') => {
     if (sortBy === key) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -152,7 +174,7 @@ export default function CompaniesPage() {
       },
     },
     {
-      key: 'id' as const,
+      key: 'actions' as const,
       label: 'Actions',
       width: '11%',
       render: (value: string, item: MarineCompany) => (
@@ -209,10 +231,10 @@ export default function CompaniesPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Companies', value: mockCompanies.length, color: 'bg-slate-900' },
-          { label: 'Verified', value: mockCompanies.filter(c => c.verificationStatus === 'verified').length, color: 'bg-emerald-500' },
-          { label: 'Pending Review', value: mockCompanies.filter(c => c.verificationStatus === 'pending').length, color: 'bg-amber-500' },
-          { label: 'Avg Rating', value: (mockCompanies.reduce((s,c) => s + c.rating, 0) / mockCompanies.filter(c => c.rating > 0).length).toFixed(2), color: 'bg-blue-500' },
+          { label: 'Total Companies', value: companies.length, color: 'bg-slate-900' },
+          { label: 'Verified', value: companies.filter(c => c.verificationStatus === 'verified').length, color: 'bg-emerald-500' },
+          { label: 'Pending Review', value: companies.filter(c => c.verificationStatus === 'pending').length, color: 'bg-amber-500' },
+          { label: 'Avg Rating', value: companies.length > 0 ? (companies.reduce((s,c) => s + (c.rating || 0), 0) / (companies.filter(c => (c.rating || 0) > 0).length || 1)).toFixed(2) : '0.00', color: 'bg-blue-500' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-5 flex items-start gap-3">
             <div className={`w-1 h-8 rounded-full mt-0.5 ${stat.color}`} />
@@ -259,19 +281,43 @@ export default function CompaniesPage() {
         </div>
 
         {/* Data Table */}
-        <DataTable
-          data={filteredCompanies}
-          columns={columns}
-          sortBy={sortBy}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          totalItems={mockCompanies.length}
-          itemsPerPage={10}
-          totalPages={Math.ceil(mockCompanies.length / 10)}
-          onRowClick={(company) =>
-            router.push(`/dashboard/companies/${company.id}`)
-          }
-        />
+        {isLoading ? (
+          <div className="p-20 flex flex-col items-center justify-center space-y-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-medium text-muted-foreground">Loading companies...</p>
+          </div>
+        ) : error ? (
+          <div className="p-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-destructive rotate-45" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-foreground">Something went wrong</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">{error}</p>
+            </div>
+            <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-2"
+            >
+                Try Again
+            </Button>
+          </div>
+        ) : (
+          <DataTable
+            data={filteredCompanies}
+            columns={columns}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            totalItems={companies.length}
+            itemsPerPage={10}
+            totalPages={Math.ceil(companies.length / 10)}
+            onRowClick={(company) =>
+              router.push(`/dashboard/companies/${company.id}`)
+            }
+          />
+        )}
       </div>
     </div>
   )

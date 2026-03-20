@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface Column<T> {
-  key: keyof T
+  key: keyof T | 'actions'
   label: string
   render?: (value: any, item: T) => ReactNode
   sortable?: boolean
@@ -31,9 +31,9 @@ interface DataTableProps<T> {
   data: T[]
   columns: Column<T>[]
   onRowClick?: (item: T) => void
-  sortBy?: keyof T
+  sortBy?: keyof T | 'actions'
   sortDirection?: 'asc' | 'desc'
-  onSort?: (key: keyof T) => void
+  onSort?: (key: keyof T | 'actions') => void
   currentPage?: number
   totalPages?: number
   totalItems?: number
@@ -168,15 +168,18 @@ export function DataTable<T extends { id: string }>({
                       className="rounded-[4px] border-slate-300 data-[state=checked]:bg-[#050B20] data-[state=checked]:border-[#050B20]"
                     />
                   </TableCell>
-                  {columns.map((col) => (
-                    <td key={String(col.key)} className="px-4 py-3.5">
-                      <div className="text-sm text-slate-700">
-                        {col.render
-                          ? col.render(item[col.key], item)
-                          : String(item[col.key])}
-                      </div>
-                    </td>
-                  ))}
+                   {columns.map((col) => {
+                     const value = col.key === 'actions' ? undefined : (item as any)[col.key]
+                     return (
+                       <td key={String(col.key)} className="px-4 py-3.5">
+                         <div className="text-sm text-slate-700">
+                           {col.render
+                             ? col.render(value, item)
+                             : String(value ?? '')}
+                         </div>
+                       </td>
+                     )
+                   })}
                 </TableRow>
               ))
             )}

@@ -28,34 +28,79 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  mockCompanies,
-  getCompanyById,
-  getEquipmentByCompanyId,
-  getOrdersByCompanyId,
-} from '@/lib/mock-data'
+import { companyService } from '@/lib/services/company'
+import { equipmentService } from '@/lib/services/equipment'
+import { orderService } from '@/lib/services/order'
+import { MarineCompany, Equipment, Order } from '@/lib/types'
+import { useEffect } from 'react'
 import { DataTable } from '@/components/data-table'
 
 export default function CompanyDetailPage() {
   const router = useRouter()
   const params = useParams()
   const companyId = params.id as string
+  const [company, setCompany] = useState<MarineCompany | null>(null)
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [actionType, setActionType] = useState<'approve' | 'suspend' | null>(null)
 
-  const company = getCompanyById(companyId)
-  const equipment = getEquipmentByCompanyId(companyId)
-  const orders = getOrdersByCompanyId(companyId)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [companyData, equipmentData, ordersData] = await Promise.all([
+          companyService.getById(companyId),
+          equipmentService.getByCompanyId(companyId),
+          orderService.getByCompanyId(companyId)
+        ])
+        
+        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || []
+        const ordersArray = Array.isArray(ordersData) ? ordersData : (ordersData as any)?.orders || (ordersData as any)?.data || []
+        
+        setCompany(companyData)
+        setEquipment(equipmentArray)
+        setOrders(ordersArray)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch company details')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  if (!company) {
+    if (companyId) {
+      fetchData()
+    }
+  }, [companyId])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-muted-foreground">Loading company details...</p>
+      </div>
+    )
+  }
+
+  if (error || !company) {
     return (
       <div className="space-y-6">
-        <Header title="Company Not Found" />
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            The company you are looking for does not exist.
-          </p>
-          <Button onClick={() => router.back()}>Go Back</Button>
+        <div className="text-center py-20 bg-white rounded-2xl border border-destructive/10 shadow-sm space-y-6">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Oops! Something went wrong</h2>
+            <p className="text-muted-foreground max-w-md mx-auto mt-2">
+              {error || 'The company you are looking for does not exist or could not be loaded.'}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
         </div>
       </div>
     )
@@ -114,7 +159,7 @@ export default function CompanyDetailPage() {
       ),
     },
     {
-      key: 'id' as const,
+      key: 'actions' as const,
       label: 'Actions',
       width: '15%',
       render: () => <Button variant="ghost" size="sm">View</Button>,
@@ -157,7 +202,7 @@ export default function CompanyDetailPage() {
       ),
     },
     {
-      key: 'id' as const,
+      key: 'actions' as const,
       label: 'Actions',
       width: '10%',
       render: () => <Button variant="ghost" size="sm">View</Button>,

@@ -25,17 +25,47 @@ import {
   Download,
   Columns,
 } from 'lucide-react'
-import { mockEquipment, mockCompanies } from '@/lib/mock-data'
-import { Equipment } from '@/lib/types'
+import { equipmentService } from '@/lib/services/equipment'
+import { companyService } from '@/lib/services/company'
+import { Equipment, MarineCompany } from '@/lib/types'
+import { useEffect } from 'react'
 
 export default function EquipmentPage() {
   const router = useRouter()
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [companies, setCompanies] = useState<MarineCompany[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<keyof Equipment>('name')
+  const [sortBy, setSortBy] = useState<keyof Equipment | 'actions'>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [equipmentData, companyData] = await Promise.all([
+          equipmentService.getAll(),
+          companyService.getAll()
+        ])
+        
+        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || []
+        const companiesArray = Array.isArray(companyData) ? companyData : (companyData as any)?.companies || (companyData as any)?.data || []
+        
+        setEquipment(equipmentArray)
+        setCompanies(companiesArray)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch equipment data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
   const filteredEquipment = useMemo(() => {
-    return mockEquipment
+    return equipment
       .filter((item) => {
         const matchesSearch = 
           item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,9 +74,9 @@ export default function EquipmentPage() {
         return matchesSearch
       })
       .sort((a, b) => {
-// ... existing sort logic ...
-        const aValue = a[sortBy]
-        const bValue = b[sortBy]
+        if (sortBy === 'actions') return 0
+        const aValue = a[sortBy as keyof Equipment]
+        const bValue = b[sortBy as keyof Equipment]
 
         if (typeof aValue === 'string') {
           return sortDirection === 'asc'
@@ -59,7 +89,7 @@ export default function EquipmentPage() {
       })
   }, [searchTerm, sortBy, sortDirection])
 
-  const handleSort = (key: keyof Equipment) => {
+  const handleSort = (key: keyof Equipment | 'actions') => {
     if (sortBy === key) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -69,11 +99,9 @@ export default function EquipmentPage() {
   }
 
   const getCompanyName = (companyId: string) => {
-    return mockCompanies.find((c) => c.id === companyId)?.name || 'Unknown'
+    return companies.find((c) => c.id === companyId)?.name || 'Unknown'
   }
 
-  const categories = Array.from(new Set(mockEquipment.map((e) => e.category)))
-  const availabilities = Array.from(new Set(mockEquipment.map((e) => e.availability)))
 
   const columns = [
     {
@@ -135,7 +163,7 @@ export default function EquipmentPage() {
       ),
     },
     {
-      key: 'id' as const,
+      key: 'actions' as const,
       label: 'Actions',
       width: '15%',
       render: (_: string, item: Equipment) => (
@@ -190,10 +218,10 @@ export default function EquipmentPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Items', value: mockEquipment.length, color: 'bg-slate-900' },
-          { label: 'Available', value: mockEquipment.filter(e => e.availability === 'available').length, color: 'bg-emerald-500' },
-          { label: 'Rented', value: mockEquipment.filter(e => e.availability === 'rented').length, color: 'bg-blue-500' },
-          { label: 'Maintenance', value: mockEquipment.filter(e => e.availability === 'maintenance').length, color: 'bg-amber-500' },
+          { label: 'Total Items', value: equipment.length, color: 'bg-slate-900' },
+          { label: 'Available', value: equipment.filter(e => e.availability === 'available').length, color: 'bg-emerald-500' },
+          { label: 'Rented', value: equipment.filter(e => e.availability === 'rented').length, color: 'bg-blue-500' },
+          { label: 'Maintenance', value: equipment.filter(e => e.availability === 'maintenance').length, color: 'bg-amber-500' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-5 flex items-start gap-3">
             <div className={`w-1 h-8 rounded-full mt-0.5 ${stat.color}`} />
@@ -231,27 +259,51 @@ export default function EquipmentPage() {
         </div>
 
         {/* Data Table */}
-        <DataTable
-          data={filteredEquipment}
-          columns={columns}
-          sortBy={sortBy}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          totalItems={mockEquipment.length}
-          itemsPerPage={10}
-          totalPages={Math.ceil(mockEquipment.length / 10)}
-          onRowClick={(item) =>
-            console.log('Row clicked', item.id)
-          }
-        />
+        {isLoading ? (
+          <div className="p-20 flex flex-col items-center justify-center space-y-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-medium text-muted-foreground">Loading assets...</p>
+          </div>
+        ) : error ? (
+          <div className="p-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-destructive rotate-45" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-foreground">Something went wrong</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">{error}</p>
+            </div>
+            <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-2"
+            >
+                Try Again
+            </Button>
+          </div>
+        ) : (
+          <DataTable
+            data={filteredEquipment}
+            columns={columns}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            totalItems={equipment.length}
+            itemsPerPage={10}
+            totalPages={Math.ceil(equipment.length / 10)}
+            onRowClick={(item) =>
+              router.push(`/dashboard/equipment/${item.id}`)
+            }
+          />
+        )}
       </div>
 
       {/* Maintenance Alert */}
-      {mockEquipment.filter((e) => e.availability === 'maintenance').length > 0 && (
+      {equipment.filter((e) => e.availability === 'maintenance').length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm font-medium text-amber-800">
-            <span className="font-bold">{mockEquipment.filter((e) => e.availability === 'maintenance').length} assets</span> are currently under maintenance.
+            <span className="font-bold">{equipment.filter((e) => e.availability === 'maintenance').length} assets</span> are currently under maintenance.
           </p>
         </div>
       )}

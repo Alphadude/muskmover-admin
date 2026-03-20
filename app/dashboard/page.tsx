@@ -26,12 +26,8 @@ import {
   AlertCircle,
   Star,
 } from 'lucide-react'
-import {
-  mockDashboardStats,
-  mockOrders,
-  mockCompanies,
-  mockMessages,
-} from '@/lib/mock-data'
+import { dashboardService, DashboardData } from '@/lib/services/dashboard'
+import { useEffect, useState } from 'react'
 
 const revenueData = [
   { month: 'Jan', revenue: 2400000, orders: 24 },
@@ -57,6 +53,31 @@ const categoryData = [
 ]
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardData | null>(null)
+  const [activity, setActivity] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true)
+        const [statsData, activityData] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getRecentActivity(),
+        ])
+        setStats(statsData)
+        setActivity(activityData)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load dashboard data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
   const formatNaira = (value: number) => {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
@@ -65,13 +86,37 @@ export default function Dashboard() {
     }).format(value)
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-muted-foreground">Loading dashboard analytics...</p>
+      </div>
+    )
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Failed to load analytics</h2>
+          <p className="text-muted-foreground mt-2">{error || 'Something went wrong while fetching the dashboard data.'}</p>
+        </div>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard
           title="Total Companies"
-          value={mockDashboardStats.totalCompanies}
+          value={stats.totalCompanies}
           icon={<Users className="w-8 h-8" />}
           description="Active marketplace vendors"
           variant="default"
@@ -79,7 +124,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Equipment Listed"
-          value={mockDashboardStats.totalEquipment}
+          value={stats.totalEquipment}
           icon={<Package className="w-8 h-8" />}
           description="Across all categories"
           variant="accent"
@@ -87,7 +132,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Active Orders"
-          value={mockDashboardStats.activeOrders}
+          value={stats.activeOrders}
           icon={<ShoppingCart className="w-8 h-8" />}
           description="In progress"
           variant="secondary"
@@ -95,7 +140,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Monthly Revenue"
-          value={formatNaira(mockDashboardStats.monthlyRevenue)}
+          value={formatNaira(stats.monthlyRevenue)}
           icon={<TrendingUp className="w-8 h-8" />}
           description="Current month"
           variant="default"
@@ -103,7 +148,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Pending Verification"
-          value={mockDashboardStats.pendingVerifications}
+          value={stats.pendingVerifications}
           icon={<AlertCircle className="w-8 h-8" />}
           description="Action required"
           variant="secondary"
@@ -124,7 +169,7 @@ export default function Dashboard() {
             </p>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={revenueData}>
+            <LineChart data={stats.revenueTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis 
                 dataKey="month" 
@@ -187,7 +232,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={equipmentUsageData}
+                data={stats.equipmentStatus}
                 cx="50%"
                 cy="50%"
                 innerRadius={70}
@@ -211,7 +256,7 @@ export default function Dashboard() {
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-3 mt-4">
-            {equipmentUsageData.map((item) => (
+            {stats.equipmentStatus.map((item) => (
               <div key={item.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
@@ -237,7 +282,7 @@ export default function Dashboard() {
             </p>
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={categoryData}>
+            <BarChart data={stats.categoryDistribution}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis 
                 dataKey="name" 
@@ -271,21 +316,21 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="space-y-3">
-            {mockMessages.slice(0, 4).map((message) => (
+            {activity.slice(0, 4).map((item) => (
               <div
-                key={message.id}
+                key={item.id}
                 className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all cursor-pointer group"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-900 text-sm truncate group-hover:text-blue-600 transition-colors">
-                      {message.senderName}
+                      {item.title || item.senderName}
                     </p>
                     <p className="text-xs font-medium text-slate-500 truncate mt-0.5">
-                      {message.subject}
+                      {item.description || item.subject}
                     </p>
                   </div>
-                  {!message.isRead && (
+                  {(item.isRead === false || item.unread) && (
                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] flex-shrink-0 mt-1" />
                   )}
                 </div>
