@@ -21,15 +21,35 @@ import {
   Search,
   Filter,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { userService } from '@/lib/services/user'
-import { AdminUser } from '@/lib/types'
+import { AdminUser, UserRole, UserStatus } from '@/lib/types'
 import { useEffect } from 'react'
+import { toast } from 'sonner'
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -47,6 +67,34 @@ export default function UsersPage() {
 
     fetchUsers()
   }, [])
+
+  const handleEditUser = (user: AdminUser) => {
+    setEditingUser({ ...user })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingUser) return
+
+    try {
+      setIsUpdating(true)
+      await userService.update(editingUser.id, {
+        name: editingUser.name,
+        role: editingUser.role,
+        status: editingUser.status,
+      })
+      
+      const updatedUsers = users.map(u => u.id === editingUser.id ? editingUser : u)
+      setUsers(updatedUsers)
+      setIsEditDialogOpen(false)
+      toast.success('User updated successfully')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update user')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   const filteredUsers = useMemo(() =>
     users.filter(u =>
@@ -140,7 +188,10 @@ export default function UsersPage() {
             <DropdownMenuItem className="gap-2 text-sm">
               <Eye className="w-3.5 h-3.5" /> View
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 text-sm">
+            <DropdownMenuItem 
+              className="gap-2 text-sm"
+              onClick={() => handleEditUser(item)}
+            >
               <Edit className="w-3.5 h-3.5" /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2 text-sm text-red-500 focus:text-red-500">
@@ -261,6 +312,88 @@ export default function UsersPage() {
           ))}
         </div>
       </div>
+
+      {/* Edit User Modal */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update the user's information and permissions.
+            </DialogDescription>
+          </DialogHeader>
+          {editingUser && (
+            <form onSubmit={handleUpdateUser} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  value={editingUser.email}
+                  disabled
+                  className="bg-slate-50"
+                />
+                <p className="text-[10px] text-muted-foreground">Email cannot be changed.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Role</Label>
+                  <Select
+                    value={editingUser.role}
+                    onValueChange={(value: UserRole) => setEditingUser({ ...editingUser, role: value })}
+                  >
+                    <SelectTrigger id="edit-role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select
+                    value={editingUser.status}
+                    onValueChange={(value: UserStatus) => setEditingUser({ ...editingUser, status: value })}
+                  >
+                    <SelectTrigger id="edit-status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter className="pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
