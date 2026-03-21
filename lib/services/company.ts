@@ -14,6 +14,10 @@ export const companyService = {
     return api.post<MarineCompany>('/api/companies', data);
   },
 
+  async uploadImage(payload: { data: string; type: string }): Promise<any> {
+    return api.post<any>('/api/uploads', payload);
+  },
+
   async update(id: string, data: Partial<MarineCompany>): Promise<MarineCompany> {
     return api.put<MarineCompany>(`/api/companies/${id}`, data);
   },

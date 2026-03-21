@@ -42,14 +42,43 @@ export default function AddCompanyPage() {
     })
   }
 
+  const uploadToBackend = async (file: File, type: 'company' | 'vessel' | 'equipment'): Promise<string> => {
+    const base64 = await fileToBase64(file)
+    // The base64 string includes the data:image/png;base64, prefix.
+    // Check if the backend expects the prefix or just the raw data.
+    // Based on many APIs, the raw data is often preferred, but let's check docs again.
+    // The subagent said "base64-encoded string". Usually this means the data part.
+    const base64Data = base64.split(',')[1]
+
+    interface UploadResponse {
+      url?: string
+      secure_url?: string
+      data?: { url: string }
+    }
+
+    const response = await companyService.uploadImage({
+      data: base64Data,
+      type
+    })
+
+    // Handle different possible response structures
+    const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
+    if (!url) {
+      throw new Error('Upload failed: No URL returned from server')
+    }
+    return url
+  }
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      const toastId = toast.loading('Uploading logo...')
       try {
-        const base64 = await fileToBase64(file)
-        setLogo(base64)
-      } catch (err) {
-        toast.error('Failed to process logo')
+        const url = await uploadToBackend(file, 'company')
+        setLogo(url)
+        toast.success('Logo uploaded', { id: toastId })
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to upload logo', { id: toastId })
       }
     }
   }
@@ -57,11 +86,13 @@ export default function AddCompanyPage() {
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      const toastId = toast.loading('Uploading banner...')
       try {
-        const base64 = await fileToBase64(file)
-        setBanner(base64)
-      } catch (err) {
-        toast.error('Failed to process banner')
+        const url = await uploadToBackend(file, 'company')
+        setBanner(url)
+        toast.success('Banner uploaded', { id: toastId })
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to upload banner', { id: toastId })
       }
     }
   }
@@ -247,6 +278,16 @@ export default function AddCompanyPage() {
                     className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Postal Code</label>
+                <Input
+                  placeholder="e.g. 101233"
+                  value={formData.postalCode}
+                  onChange={(e) => setFormData({...formData, postalCode: e.target.value})}
+                  className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900"
+                />
               </div>
 
               <div className="space-y-1.5">

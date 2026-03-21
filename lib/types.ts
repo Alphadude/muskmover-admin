@@ -24,6 +24,7 @@ export interface MarineCompany {
   totalRevenue: number
   joinedDate: Date
   description?: string
+  postalCode?: string
 }
 
 export interface Equipment {
