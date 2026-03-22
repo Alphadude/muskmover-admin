@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Mail,
@@ -17,6 +18,7 @@ import {
   Check,
   Clock,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -31,7 +33,7 @@ import {
 import { companyService } from '@/lib/services/company'
 import { equipmentService } from '@/lib/services/equipment'
 import { orderService } from '@/lib/services/order'
-import { MarineCompany, Equipment, Order } from '@/lib/types'
+import { MarineCompany, Equipment, Order, CompanyVerificationStatus } from '@/lib/types'
 import { useEffect } from 'react'
 import { DataTable } from '@/components/data-table'
 
@@ -45,12 +47,15 @@ export default function CompanyDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [actionType, setActionType] = useState<'approve' | 'suspend' | null>(null)
+  const [actionType, setActionType] = useState<'approve' | 'suspend' | 'delete' | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
+        // Fetch company first as it is essential
+        const companyData = await companyService.getById(companyId)
+        
         // Handle potential 'data' wrapper from API
         const rawCompany = (companyData as any).data || companyData;
         
@@ -92,6 +97,30 @@ export default function CompanyDetailPage() {
       fetchData()
     }
   }, [companyId])
+
+  const handleStatusUpdate = async (newStatus: CompanyVerificationStatus) => {
+    if (!company) return
+    const toastId = toast.loading(`Updating company status to ${newStatus}...`)
+    try {
+      await companyService.update(companyId, { verificationStatus: newStatus })
+      setCompany({ ...company, verificationStatus: newStatus })
+      toast.success(`Company status updated to ${newStatus}`, { id: toastId })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status', { id: toastId })
+    }
+  }
+
+  const handleStatusDelete = async () => {
+    if (!company) return
+    const toastId = toast.loading('Deleting company...')
+    try {
+      await companyService.delete(companyId)
+      toast.success('Company deleted successfully', { id: toastId })
+      router.push('/dashboard/companies')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete company', { id: toastId })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -346,7 +375,7 @@ export default function CompanyDetailPage() {
               </div>
               <div className="flex items-baseline gap-1">
                 <p className="text-5xl font-black text-slate-900 tracking-tighter">
-                  {company.rating > 0 ? company.rating : '-'}
+                  {company.rating || 0}
                 </p>
                 <span className="text-lg font-bold text-slate-300">/ 5.0</span>
               </div>
@@ -396,7 +425,7 @@ export default function CompanyDetailPage() {
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-white tracking-tighter">
-                    ₦{(company.totalRevenue / 1000000).toFixed(1)}M
+                    {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(company.totalRevenue || 0)}
                   </span>
                   <span className="text-xs font-medium text-[#EA580C]">+12.5%</span>
                 </div>
@@ -405,11 +434,19 @@ export default function CompanyDetailPage() {
 
             <div className="flex gap-3 pt-2">
               <Button 
+                onClick={() => router.push(`/dashboard/companies/${companyId}/edit`)}
+                className="flex-1 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-0 transition-transform hover:scale-105 active:scale-95"
+              >
+                Edit Profile
+              </Button>
+              <Button 
                 onClick={() => { setActionType('approve'); setIsModalOpen(true); }}
                 className="flex-1 h-12 rounded-xl bg-[#EA580C] hover:bg-[#D44D0A] font-bold shadow-[#EA580C]/20 shadow-lg border-0 transition-transform hover:scale-105 active:scale-95"
               >
                 Approve Business
               </Button>
+            </div>
+            <div className="flex gap-3 mt-3">
               <Button 
                 onClick={() => { setActionType('suspend'); setIsModalOpen(true); }}
                 variant="outline" 
@@ -417,23 +454,40 @@ export default function CompanyDetailPage() {
               >
                 Suspend Account
               </Button>
+              <Button 
+                onClick={() => { setActionType('delete'); setIsModalOpen(true); }}
+                variant="ghost" 
+                className="flex-1 h-12 rounded-xl text-destructive hover:bg-destructive/10 font-bold transition-all"
+              >
+                Delete Company
+              </Button>
             </div>
 
             <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <AlertDialogContent className="rounded-2xl border-slate-200">
                 <AlertDialogHeader>
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 rounded-lg ${actionType === 'suspend' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                      {actionType === 'suspend' ? <AlertTriangle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+                    <div className={`p-2 rounded-lg ${
+                      actionType === 'delete' ? 'bg-red-50 text-red-600' :
+                      actionType === 'suspend' ? 'bg-orange-50 text-orange-600' : 
+                      'bg-green-50 text-green-600'
+                    }`}>
+                      {actionType === 'delete' ? <Trash2 className="w-5 h-5" /> :
+                       actionType === 'suspend' ? <AlertTriangle className="w-5 h-5" /> : 
+                       <Check className="w-5 h-5" />}
                     </div>
                     <AlertDialogTitle className="text-xl font-bold text-slate-900">
-                      {actionType === 'approve' ? 'Approve Business' : 'Suspend Account'}
+                      {actionType === 'approve' ? 'Approve Business' : 
+                       actionType === 'suspend' ? 'Suspend Account' :
+                       'Delete Company'}
                     </AlertDialogTitle>
                   </div>
                   <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
                     {actionType === 'approve' 
                       ? `Are you sure you want to approve "${company.name}"? This will mark the business as verified and visible on the marketplace.`
-                      : `Are you sure you want to suspend the account for "${company.name}"? This will restrict their access to the platform and hide their listings.`
+                      : actionType === 'suspend'
+                      ? `Are you sure you want to suspend the account for "${company.name}"? This will restrict their access to the platform and hide their listings.`
+                      : `Are you sure you want to delete "${company.name}"? This action is permanent and cannot be undone.`
                     }
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -443,12 +497,18 @@ export default function CompanyDetailPage() {
                   </AlertDialogCancel>
                   <AlertDialogAction 
                     className={`rounded-xl font-bold h-11 border-0 shadow-lg transition-transform active:scale-95 ${
-                      actionType === 'suspend' 
+                      actionType === 'delete' || actionType === 'suspend'
                         ? 'bg-destructive hover:bg-destructive/90 shadow-destructive/20' 
                         : 'bg-[#EA580C] hover:bg-[#D44D0A] shadow-[#EA580C]/20'
                     }`}
                     onClick={() => {
-                      // Implementation logic would go here
+                      if (actionType === 'approve') {
+                        handleStatusUpdate('verified')
+                      } else if (actionType === 'suspend') {
+                        handleStatusUpdate('unverified')
+                      } else if (actionType === 'delete') {
+                        handleStatusDelete()
+                      }
                       setIsModalOpen(false);
                     }}
                   >

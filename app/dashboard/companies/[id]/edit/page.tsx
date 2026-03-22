@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ChevronRight, Save, Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { ChevronRight, Save, Upload, X, Image as ImageIcon, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,9 +16,14 @@ import {
 import { toast } from 'sonner'
 import { companyService } from '@/lib/services/company'
 import { SuccessModal } from '@/components/ui/success-modal'
+import { MarineCompany } from '@/lib/types'
 
-export default function AddCompanyPage() {
+export default function EditCompanyPage() {
   const router = useRouter()
+  const params = useParams()
+  const companyId = params.id as string
+  
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -26,6 +31,7 @@ export default function AddCompanyPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [error, setError] = useState('')
 
   const countryNames: Record<string, string> = {
     ng: 'Nigeria',
@@ -34,6 +40,12 @@ export default function AddCompanyPage() {
     uk: 'United Kingdom',
     us: 'United States',
   }
+
+  // Reverse mapping for select component
+  const getCountryCode = (name: string) => {
+    return Object.keys(countryNames).find(key => countryNames[key] === name) || 'ng'
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     contactEmail: '',
@@ -43,6 +55,39 @@ export default function AddCompanyPage() {
     postalCode: '',
     description: '',
   })
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        setIsLoading(true)
+        const data = await companyService.getById(companyId)
+        
+        // Handle potential 'data' wrapper
+        const rawCompany = (data as any).data || data
+        
+        setFormData({
+          name: rawCompany.name || '',
+          contactEmail: rawCompany.contactEmail || rawCompany.email || '',
+          phone: rawCompany.phone || '',
+          country: getCountryCode(rawCompany.country),
+          location: rawCompany.location || '',
+          postalCode: rawCompany.postalCode || '',
+          description: rawCompany.description || '',
+        })
+        setLogo(rawCompany.logo || null)
+        setBanner(rawCompany.banner || null)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load company details')
+        toast.error('Failed to load company details')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (companyId) {
+      fetchCompany()
+    }
+  }, [companyId])
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -55,24 +100,13 @@ export default function AddCompanyPage() {
 
   const uploadToBackend = async (file: File, type: 'company' | 'vessel' | 'equipment'): Promise<string> => {
     const base64 = await fileToBase64(file)
-    // The base64 string includes the data:image/png;base64, prefix.
-    // Check if the backend expects the prefix or just the raw data.
-    // Based on many APIs, the raw data is often preferred, but let's check docs again.
-    // The subagent said "base64-encoded string". Usually this means the data part.
     const base64Data = base64.split(',')[1]
-
-    interface UploadResponse {
-      url?: string
-      secure_url?: string
-      data?: { url: string }
-    }
 
     const response = await companyService.uploadImage({
       data: base64Data,
       type
     })
 
-    // Handle different possible response structures
     const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
     if (!url) {
       throw new Error('Upload failed: No URL returned from server')
@@ -86,11 +120,11 @@ export default function AddCompanyPage() {
       // Set local preview immediately
       const localUrl = URL.createObjectURL(file)
       setLogoPreview(localUrl)
-
+      
       const toastId = toast.loading('Uploading logo...')
       setIsUploading(true)
       try {
-        // Check file size (5MB limit for standard backends)
+        // Check file size (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
           throw new Error('File too large (max 5MB)')
         }
@@ -100,7 +134,7 @@ export default function AddCompanyPage() {
         toast.success('Logo uploaded', { id: toastId })
       } catch (err: any) {
         toast.error(err.message || 'Failed to upload logo', { id: toastId })
-        setLogo(null) // Reset final URL but keep preview so they can try another
+        setLogo(null)
       } finally {
         setIsUploading(false)
       }
@@ -138,27 +172,45 @@ export default function AddCompanyPage() {
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      await companyService.create({
+      await companyService.update(companyId, {
         ...formData,
         email: formData.contactEmail,
         country: countryNames[formData.country] || formData.country,
         logo: logo || undefined,
         banner: banner || undefined,
-        verificationStatus: 'pending',
-        rating: 0,
-        totalEquipment: 0,
-        totalOrders: 0,
-        totalRevenue: 0,
-        joinedDate: new Date(),
       })
       
       setShowSuccess(true)
-      toast.success('Company created successfully!')
+      toast.success('Company updated successfully!')
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create company')
+      toast.error(err.message || 'Failed to update company')
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-sm font-medium text-muted-foreground">Loading company details...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Failed to load company</h2>
+          <p className="text-slate-500 mt-2">{error}</p>
+        </div>
+        <Button onClick={() => router.back()}>Go Back</Button>
+      </div>
+    )
   }
 
   return (
@@ -179,7 +231,14 @@ export default function AddCompanyPage() {
           Marine Companies
         </span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-        <span className="text-slate-900 font-bold">Add Company</span>
+        <span
+            className="hover:text-foreground cursor-pointer transition-colors font-medium"
+            onClick={() => router.push(`/dashboard/companies/${companyId}`)}
+        >
+            Company Details
+        </span>
+        <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+        <span className="text-slate-900 font-bold">Edit Company</span>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-10">
@@ -233,8 +292,10 @@ export default function AddCompanyPage() {
                     </>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-slate-100/50 transition-colors">
-                      <Upload className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2 text-center px-3">Upload Banner</span>
+                      <div className="p-3 rounded-xl bg-white shadow-sm border border-slate-100 transition-transform group-hover:scale-110">
+                        <ImageIcon className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-3">Upload Banner</span>
                       <input type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                     </label>
                   )}
@@ -290,7 +351,7 @@ export default function AddCompanyPage() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Country</label>
                   <Select 
-                    defaultValue="ng" 
+                    value={formData.country} 
                     onValueChange={(val) => setFormData({...formData, country: val})}
                   >
                     <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900">
@@ -355,7 +416,7 @@ export default function AddCompanyPage() {
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Creating...
+                Updating...
               </span>
             ) : isUploading ? (
               <span className="flex items-center gap-2">
@@ -365,7 +426,7 @@ export default function AddCompanyPage() {
             ) : (
               <span className="flex items-center gap-3">
                 <Save className="w-5 h-5" />
-                Save Company
+                Update Company
               </span>
             )}
           </Button>
@@ -376,7 +437,7 @@ export default function AddCompanyPage() {
             disabled={isSubmitting}
             className="h-14 text-sm font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-2xl px-6"
           >
-            Return to List
+            Cancel
           </Button>
         </div>
       </form>
@@ -385,31 +446,18 @@ export default function AddCompanyPage() {
         isOpen={showSuccess}
         onClose={() => {
           setShowSuccess(false)
-          router.push('/dashboard/companies')
+          router.push(`/dashboard/companies/${companyId}`)
         }}
-        title="Company Registered!"
-        message={`${formData.name} has been successfully added to the MuskMover directory.`}
-        actionLabel="View All Companies"
-        onAction={() => router.push('/dashboard/companies')}
-        secondaryActionLabel="Add Another Company"
+        title="Details Updated!"
+        message={`${formData.name}'s information has been successfully updated.`}
+        actionLabel="View Details"
+        onAction={() => router.push(`/dashboard/companies/${companyId}`)}
+        secondaryActionLabel="Return to List"
         onSecondaryAction={() => {
           setShowSuccess(false)
-          setFormData({
-            name: '',
-            contactEmail: '',
-            phone: '',
-            country: 'ng',
-            location: '',
-            postalCode: '',
-            description: '',
-          })
-          setLogo(null)
-          setLogoPreview(null)
-          setBanner(null)
-          setBannerPreview(null)
+          router.push('/dashboard/companies')
         }}
       />
     </div>
   )
 }
-

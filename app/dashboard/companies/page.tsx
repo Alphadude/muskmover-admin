@@ -30,6 +30,17 @@ import {
 import { companyService } from '@/lib/services/company'
 import { MarineCompany } from '@/lib/types'
 import { useEffect } from 'react'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export default function CompaniesPage() {
   const router = useRouter()
@@ -39,6 +50,8 @@ export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<keyof MarineCompany | 'actions'>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [companyToDelete, setCompanyToDelete] = useState<MarineCompany | null>(null)
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -109,6 +122,21 @@ export default function CompaniesPage() {
     } else {
       setSortBy(key)
       setSortDirection('asc')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!companyToDelete) return
+    const toastId = toast.loading('Deleting company...')
+    try {
+      await companyService.delete(companyToDelete.id)
+      setCompanies(companies.filter(c => c.id !== companyToDelete.id))
+      toast.success('Company deleted successfully', { id: toastId })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete company', { id: toastId })
+    } finally {
+      setIsDeleteModalOpen(false)
+      setCompanyToDelete(null)
     }
   }
 
@@ -215,11 +243,19 @@ export default function CompaniesPage() {
               <Eye className="w-4 h-4 mr-2" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push(`/dashboard/companies/${item.id}/edit`)}
+            >
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => {
+                setCompanyToDelete(item)
+                setIsDeleteModalOpen(true)
+              }}
+            >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
             </DropdownMenuItem>
@@ -343,6 +379,35 @@ export default function CompaniesPage() {
           />
         )}
       </div>
+
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent className="rounded-2xl border-slate-200">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900">
+                Delete Company
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-slate-900">"{companyToDelete?.name}"</span>? This action is permanent and cannot be undone. All associated equipment and order data might be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="rounded-xl font-bold h-11 border-slate-200 text-slate-600 hover:bg-slate-50">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="rounded-xl font-bold h-11 border-0 shadow-lg bg-destructive hover:bg-destructive/90 shadow-destructive/20 transition-transform active:scale-95"
+            >
+              Confirm Deletion
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
