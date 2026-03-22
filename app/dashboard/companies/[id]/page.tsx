@@ -155,19 +155,19 @@ export default function CompanyDetailPage() {
 
   const statusConfig = {
     verified: {
-      icon: <Check className="w-5 h-5 text-green-500" />,
+      icon: <Check className="w-5 h-5 text-emerald-500" />,
       label: 'Verified',
-      variant: 'default' as const,
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
     },
     pending: {
-      icon: <Clock className="w-5 h-5 text-orange-500" />,
+      icon: <Clock className="w-5 h-5 text-amber-500" />,
       label: 'Pending',
-      variant: 'secondary' as const,
+      className: 'bg-amber-50 text-amber-700 border-amber-100',
     },
     unverified: {
-      icon: <Clock className="w-5 h-5 text-red-500" />,
+      icon: <Clock className="w-5 h-5 text-slate-500" />,
       label: 'Unverified',
-      variant: 'secondary' as const,
+      className: 'bg-slate-50 text-slate-700 border-slate-100',
     },
   }
 
@@ -318,7 +318,9 @@ export default function CompanyDetailPage() {
                   )}
                   <div className="flex items-center gap-2">
                     {status?.icon}
-                    <Badge className="font-bold uppercase tracking-wider text-[10px] px-3 py-1 shadow-sm border-0" variant={status?.variant || 'secondary'}>{status?.label || 'Unknown'}</Badge>
+                    <Badge className={`font-bold uppercase tracking-wider text-[10px] px-3 py-1 shadow-sm border ${status?.className || ''}`} variant="outline">
+                      {status?.label || 'Unknown'}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -512,7 +514,7 @@ export default function CompanyDetailPage() {
                       setIsModalOpen(false);
                     }}
                   >
-                    Confirm {actionType === 'approve' ? 'Approval' : 'Suspension'}
+                    Confirm {actionType === 'approve' ? 'Approval' : actionType === 'suspend' ? 'Suspension' : 'Deletion'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

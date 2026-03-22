@@ -212,15 +212,17 @@ export default function CompaniesPage() {
       width: '15%',
       render: (value: string) => {
         const statusConfig = {
-          verified: { label: 'Verified', variant: 'default' as const },
-          pending: { label: 'Pending', variant: 'secondary' as const },
-          unverified: { label: 'Unverified', variant: 'secondary' as const },
+          verified: { label: 'Verified', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-100' },
+          unverified: { label: 'Unverified', className: 'bg-slate-50 text-slate-700 border-slate-100' },
         }
-        const config = statusConfig[value as keyof typeof statusConfig]
+        const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.unverified
         return (
           <div className="flex items-center gap-2">
             {getStatusIcon(value)}
-            <Badge variant={config.variant}>{config.label}</Badge>
+            <Badge variant="outline" className={`font-bold border ${config.className}`}>
+              {config.label}
+            </Badge>
           </div>
         )
       },

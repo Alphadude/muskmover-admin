@@ -27,6 +27,10 @@ import {
   Star,
 } from 'lucide-react'
 import { dashboardService, DashboardData } from '@/lib/services/dashboard'
+import { companyService } from '@/lib/services/company'
+import { equipmentService } from '@/lib/services/equipment'
+import { orderService } from '@/lib/services/order'
+import { notificationService } from '@/lib/services/notification'
 import { useEffect, useState } from 'react'
 
 const revenueData = [
@@ -79,25 +83,107 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true)
-        const [statsData, activityData] = await Promise.all([
-          dashboardService.getStats(),
-          dashboardService.getRecentActivity(),
+        
+        // Fetch all primary data in parallel with individual error handling
+        const [companiesRes, allEquipmentRes, ordersRes, notificationsRes] = await Promise.all([
+          companyService.getAll().catch(err => { console.error('Companies fetch failed:', err); return []; }),
+          equipmentService.getAll().catch(err => { console.error('Equipment fetch failed:', err); return []; }),
+          orderService.getAll().catch(err => { console.error('Orders fetch failed:', err); return []; }),
+          notificationService.getAll().catch(err => { console.error('Notifications fetch failed:', err); return []; }),
         ])
+
+        // Safely extract arrays (handle potential .data wrapper from backend)
+        const companies = Array.isArray(companiesRes) ? companiesRes : (companiesRes as any)?.data || []
+        const allEquipment = Array.isArray(allEquipmentRes) ? allEquipmentRes : (allEquipmentRes as any)?.data || []
+        const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.data || []
+        const notifications = Array.isArray(notificationsRes) ? notificationsRes : (notificationsRes as any)?.data || []
+
+        const now = new Date()
+        const currentMonth = now.getMonth()
+        const currentYear = now.getFullYear()
+
+        // 1. Calculate Core KPIs
+        const totalCompanies = companies.length
+        const totalEquipment = allEquipment.length
+        const activeOrders = orders.filter(o => o.status === 'active' || o.status === 'confirmed').length
+        const pendingVerifications = companies.filter(c => c.verificationStatus !== 'verified').length
         
-        // Ensure all properties used in charts are arrays
-        const processedStats = {
-          ...EMPTY_STATS,
-          ...statsData,
-          revenueTrend: Array.isArray(statsData?.revenueTrend) ? statsData.revenueTrend : [],
-          equipmentStatus: Array.isArray(statsData?.equipmentStatus) ? statsData.equipmentStatus : EMPTY_STATS.equipmentStatus,
-          categoryDistribution: Array.isArray(statsData?.categoryDistribution) ? statsData.categoryDistribution : [],
-          utilizationTrend: Array.isArray(statsData?.utilizationTrend) ? statsData.utilizationTrend : [],
+        // 2. Calculate Monthly Revenue
+        const monthlyRevenue = orders
+          .filter(o => {
+            const orderDate = new Date(o.createdAt || o.startDate)
+            return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
+          })
+          .reduce((sum, o) => sum + (o.totalPrice || 0), 0)
+
+        // 3. Calculate Equipment Statuses
+        const statusMap = allEquipment.reduce((acc: any, e) => {
+          const status = e.availability || 'available'
+          acc[status] = (acc[status] || 0) + 1
+          return acc
+        }, {})
+
+        const equipmentStatus = [
+          { name: 'Available', value: statusMap.available || 0, fill: '#00c853' },
+          { name: 'Rented', value: statusMap.rented || 0, fill: '#1e90ff' },
+          { name: 'Maintenance', value: statusMap.maintenance || statusMap.unavailable || 0, fill: '#ff9800' },
+        ]
+
+        // 4. Calculate Category Distribution
+        const catMap = allEquipment.reduce((acc: any, e) => {
+          const cat = e.category || 'other'
+          acc[cat] = (acc[cat] || 0) + 1
+          return acc
+        }, {})
+
+        const categoryDistribution = Object.entries(catMap).map(([name, count]) => ({
+          name: name.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
+          count: count as number
+        })).sort((a, b) => b.count - a.count)
+
+        // 5. Calculate Revenue Trend (Last 6 months)
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        const last6Months = []
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date()
+          d.setMonth(d.getMonth() - i)
+          last6Months.push({
+            month: months[d.getMonth()],
+            monthIdx: d.getMonth(),
+            year: d.getFullYear(),
+            revenue: 0,
+            orders: 0
+          })
         }
+
+        orders.forEach(o => {
+          const orderDate = new Date(o.createdAt || o.startDate)
+          const m = orderDate.getMonth()
+          const y = orderDate.getFullYear()
+          const trendItem = last6Months.find(item => item.monthIdx === m && item.year === y)
+          if (trendItem) {
+            trendItem.revenue += (o.totalPrice || 0)
+            trendItem.orders += 1
+          }
+        })
+
+        const processedStats: DashboardData = {
+          totalCompanies,
+          totalEquipment,
+          activeOrders,
+          monthlyRevenue,
+          pendingVerifications,
+          averageRating: companies.reduce((acc, c) => acc + (c.rating || 0), 0) / (companies.length || 1),
+          revenueTrend: last6Months.map(({ month, revenue, orders }) => ({ month, revenue, orders })),
+          equipmentStatus,
+          categoryDistribution,
+          utilizationTrend: [], // Placeholder for now
+        }
+
         setStats(processedStats)
-        
-        const activityArray = Array.isArray(activityData) ? activityData : (activityData as any)?.activity || (activityData as any)?.data || []
-        setActivity(activityArray)
+        setActivity(notifications)
       } catch (err: any) {
+        console.error('Dashboard aggregation error:', err)
         setError(err.message || 'Failed to load dashboard data')
       } finally {
         setIsLoading(false)
@@ -258,7 +344,7 @@ export default function Dashboard() {
                 dataKey="value"
                 cornerRadius={10}
               >
-                {equipmentUsageData.map((entry, index) => (
+                {stats.equipmentStatus.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
