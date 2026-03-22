@@ -42,12 +42,46 @@ export default function AddEquipmentPage() {
     fetchCompanies()
   }, [])
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
+  const uploadToBackend = async (file: File, type: 'company' | 'vessel' | 'equipment'): Promise<string> => {
+    const base64 = await fileToBase64(file)
+    const base64Data = base64.split(',')[1]
+
+    const response = await companyService.uploadImage({
+      data: base64Data,
+      type
+    })
+
+    const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
+    if (!url) {
+      throw new Error('Upload failed: No URL returned from server')
+    }
+    return url
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
-    const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-    setImages((prev) => [...prev, ...newImages])
+    const toastId = toast.loading('Uploading images...')
+    try {
+      const uploadPromises = Array.from(files).map(file => 
+        uploadToBackend(file, activeTab === 'vessel' ? 'vessel' : 'equipment')
+      )
+      const urls = await Promise.all(uploadPromises)
+      setImages((prev) => [...prev, ...urls])
+      toast.success('Images uploaded', { id: toastId })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload images', { id: toastId })
+    }
   }
 
   const removeImage = (index: number) => {

@@ -6,6 +6,10 @@ export const equipmentService = {
     return api.get<Equipment[]>('/api/equipment');
   },
 
+  async getAllVessels(): Promise<any[]> {
+    return api.get<any[]>('/api/vessels');
+  },
+
   async getById(id: string): Promise<Equipment> {
     return api.get<Equipment>(`/api/equipment/${id}`);
   },

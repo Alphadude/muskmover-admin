@@ -14,6 +14,7 @@ export interface MarineCompany {
   location: string
   country: string
   contactEmail: string
+  email?: string
   phone: string
   logo?: string
   banner?: string
@@ -23,6 +24,7 @@ export interface MarineCompany {
   totalOrders: number
   totalRevenue: number
   joinedDate: Date
+  createdAt?: string | Date
   description?: string
   postalCode?: string
 }

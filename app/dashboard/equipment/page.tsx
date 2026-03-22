@@ -44,16 +44,39 @@ export default function EquipmentPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const [equipmentData, companyData] = await Promise.all([
+        const [equipmentResponse, vesselResponse, companyResponse] = await Promise.all([
           equipmentService.getAll(),
+          equipmentService.getAllVessels(),
           companyService.getAll()
         ])
         
-        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || []
-        const companiesArray = Array.isArray(companyData) ? companyData : (companyData as any)?.companies || (companyData as any)?.data || []
+        const rawEquipment = Array.isArray(equipmentResponse) 
+          ? equipmentResponse 
+          : (equipmentResponse as any)?.equipment || (equipmentResponse as any)?.data?.equipment || (equipmentResponse as any)?.data || []
+          
+        const rawVessels = Array.isArray(vesselResponse) 
+          ? vesselResponse 
+          : (vesselResponse as any)?.vessels || (vesselResponse as any)?.data?.vessels || (vesselResponse as any)?.data || []
         
-        setEquipment(equipmentArray)
-        setCompanies(companiesArray)
+        const equipmentArray = (Array.isArray(rawEquipment) ? rawEquipment : [])
+          .map((e: any) => ({ ...e, id: String(e.id), _type: 'equipment' }))
+        
+        const vesselsArray = (Array.isArray(rawVessels) ? rawVessels : [])
+          .map((v: any) => ({ 
+            ...v, 
+            id: String(v.id),
+            _type: 'vessel',
+            category: v.type || 'vessel',
+          }))
+          
+        const combined = [...equipmentArray, ...vesselsArray]
+        
+        const companiesArray = Array.isArray(companyResponse) 
+          ? companyResponse 
+          : (companyResponse as any)?.companies || (companyResponse as any)?.data?.companies || (companyResponse as any)?.data || []
+        
+        setEquipment(combined)
+        setCompanies(Array.isArray(companiesArray) ? companiesArray : [])
       } catch (err: any) {
         setError(err.message || 'Failed to fetch equipment data')
       } finally {
@@ -65,29 +88,36 @@ export default function EquipmentPage() {
   }, [])
 
   const filteredEquipment = useMemo(() => {
-    return equipment
+    const filtered = equipment
       .filter((item) => {
+        const name = item.name || ''
+        const category = item.category || ''
+        const availability = item.availability || ''
         const matchesSearch = 
-          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.availability.toLowerCase().includes(searchTerm.toLowerCase())
+          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          availability.toLowerCase().includes(searchTerm.toLowerCase())
         return matchesSearch
       })
-      .sort((a, b) => {
-        if (sortBy === 'actions') return 0
-        const aValue = a[sortBy as keyof Equipment]
-        const bValue = b[sortBy as keyof Equipment]
+    
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'actions') return 0
+      const aValue = a[sortBy as keyof Equipment]
+      const bValue = b[sortBy as keyof Equipment]
 
-        if (typeof aValue === 'string') {
-          return sortDirection === 'asc'
-            ? aValue.localeCompare(bValue as string)
-            : (bValue as string).localeCompare(aValue)
-        }
+      if (typeof aValue === 'string') {
+        const bStr = bValue as string
         return sortDirection === 'asc'
-          ? (aValue as number) - (bValue as number)
-          : (bValue as number) - (aValue as number)
-      })
-  }, [searchTerm, sortBy, sortDirection])
+          ? aValue.localeCompare(bStr)
+          : bStr.localeCompare(aValue)
+      }
+      return sortDirection === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number)
+    })
+
+    return sorted
+  }, [equipment, searchTerm, sortBy, sortDirection])
 
   const handleSort = (key: keyof Equipment | 'actions') => {
     if (sortBy === key) {

@@ -44,8 +44,24 @@ export default function CompaniesPage() {
     const fetchCompanies = async () => {
       try {
         setIsLoading(true)
-        const data = await companyService.getAll()
-        const companiesArray = Array.isArray(data) ? data : (data as any)?.companies || (data as any)?.data || []
+        const response = await companyService.getAll()
+        
+        const rawData = Array.isArray(response) 
+          ? response 
+          : (response as any)?.companies || (response as any)?.data?.companies || (response as any)?.data || []
+        
+        const companiesArray = (Array.isArray(rawData) ? rawData : [])
+          .map((c: any) => ({
+            ...c,
+            id: String(c.id),
+            contactEmail: c.contactEmail || c.email || '',
+            joinedDate: c.joinedDate || c.createdAt || new Date(),
+            totalEquipment: c.totalEquipment ?? (Array.isArray(c.equipments) ? c.equipments.length + (Array.isArray(c.vessels) ? c.vessels.length : 0) : 0),
+            verificationStatus: c.verificationStatus || 'pending',
+            rating: c.rating ?? 0,
+            totalOrders: c.totalOrders ?? 0,
+            totalRevenue: c.totalRevenue ?? 0,
+          }))
         setCompanies(companiesArray)
       } catch (err: any) {
         setError(err.message || 'Failed to fetch companies')
@@ -58,26 +74,34 @@ export default function CompaniesPage() {
   }, [])
 
   const filteredCompanies = useMemo(() => {
-    return companies
-      .filter((company) =>
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.location.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .sort((a, b) => {
-        if (sortBy === 'actions') return 0
-        const aValue = a[sortBy as keyof MarineCompany]
-        const bValue = b[sortBy as keyof MarineCompany]
-
-        if (typeof aValue === 'string') {
-          return sortDirection === 'asc'
-            ? aValue.localeCompare(bValue as string)
-            : (bValue as string).localeCompare(aValue)
-        }
-        return sortDirection === 'asc'
-          ? (aValue as number) - (bValue as number)
-          : (bValue as number) - (aValue as number)
+    const filtered = companies
+      .filter((company) => {
+        const name = company.name || ''
+        const location = company.location || ''
+        return (
+          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          location.toLowerCase().includes(searchTerm.toLowerCase())
+        )
       })
-  }, [searchTerm, sortBy, sortDirection])
+    
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'actions') return 0
+      const aValue = a[sortBy as keyof MarineCompany]
+      const bValue = b[sortBy as keyof MarineCompany]
+
+      if (typeof aValue === 'string') {
+        const bValueStr = bValue as string
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValueStr)
+          : bValueStr.localeCompare(aValue)
+      }
+      return sortDirection === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number)
+    })
+
+    return sorted
+  }, [companies, searchTerm, sortBy, sortDirection])
 
   const handleSort = (key: keyof MarineCompany | 'actions') => {
     if (sortBy === key) {

@@ -23,6 +23,14 @@ export default function AddCompanyPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [logo, setLogo] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
+
+  const countryNames: Record<string, string> = {
+    ng: 'Nigeria',
+    gh: 'Ghana',
+    za: 'South Africa',
+    uk: 'United Kingdom',
+    us: 'United States',
+  }
   const [formData, setFormData] = useState({
     name: '',
     contactEmail: '',
@@ -103,6 +111,8 @@ export default function AddCompanyPage() {
     try {
       await companyService.create({
         ...formData,
+        email: formData.contactEmail,
+        country: countryNames[formData.country] || formData.country,
         logo: logo || undefined,
         banner: banner || undefined,
         verificationStatus: 'pending',

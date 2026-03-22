@@ -51,16 +51,34 @@ export default function CompanyDetailPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const [companyData, equipmentData, ordersData] = await Promise.all([
-          companyService.getById(companyId),
-          equipmentService.getByCompanyId(companyId),
-          orderService.getByCompanyId(companyId)
+        // Handle potential 'data' wrapper from API
+        const rawCompany = (companyData as any).data || companyData;
+        
+        // Fetch equipment and orders cautiously
+        const [equipmentData, ordersData] = await Promise.all([
+          equipmentService.getByCompanyId(companyId).catch(err => {
+            console.warn('Failed to fetch equipment:', err)
+            return []
+          }),
+          orderService.getByCompanyId(companyId).catch(err => {
+            console.warn('Failed to fetch orders:', err)
+            return []
+          })
         ])
         
-        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || []
+        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || (equipmentData as any)?.equipments || []
         const ordersArray = Array.isArray(ordersData) ? ordersData : (ordersData as any)?.orders || (ordersData as any)?.data || []
         
-        setCompany(companyData)
+        const mappedCompany = {
+          ...rawCompany,
+          name: rawCompany.name || 'Unknown Company',
+          contactEmail: rawCompany.contactEmail || rawCompany.email || '',
+          joinedDate: rawCompany.joinedDate || rawCompany.createdAt || new Date(),
+          totalEquipment: rawCompany.totalEquipment ?? (Array.isArray(rawCompany.equipments) ? rawCompany.equipments.length : 0),
+          totalVessels: Array.isArray(rawCompany.vessels) ? rawCompany.vessels.length : 0,
+        }
+        
+        setCompany(mappedCompany as MarineCompany)
         setEquipment(equipmentArray)
         setOrders(ordersArray)
       } catch (err: any) {
@@ -125,7 +143,7 @@ export default function CompanyDetailPage() {
   }
 
   const status =
-    statusConfig[company.verificationStatus as keyof typeof statusConfig]
+    statusConfig[company.verificationStatus as keyof typeof statusConfig] || statusConfig.unverified
 
   const equipmentColumns = [
     {
@@ -239,7 +257,7 @@ export default function CompanyDetailPage() {
                 />
               ) : (
                 <div className="text-2xl font-black text-slate-200">
-                  {company.name.substring(0, 2).toUpperCase()}
+                  {(company.name || 'CO').substring(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
@@ -261,9 +279,17 @@ export default function CompanyDetailPage() {
                       {company.location}, {company.country}
                     </span>
                   </div>
+                  {company.postalCode && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 shadow-sm">
+                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Zip</span>
+                      <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                        {company.postalCode}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
-                    {status.icon}
-                    <Badge className="font-bold uppercase tracking-wider text-[10px] px-3 py-1 shadow-sm border-0" variant={status.variant}>{status.label}</Badge>
+                    {status?.icon}
+                    <Badge className="font-bold uppercase tracking-wider text-[10px] px-3 py-1 shadow-sm border-0" variant={status?.variant || 'secondary'}>{status?.label || 'Unknown'}</Badge>
                   </div>
                 </div>
               </div>
@@ -333,9 +359,21 @@ export default function CompanyDetailPage() {
                     <Package className="w-4 h-4" />
                    </div>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Items listed</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Equipment</p>
                 <span className="text-2xl font-black text-slate-900 tracking-tight">
                   {company.totalEquipment}
+                </span>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                   <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-[#050B20] group-hover:text-white transition-colors">
+                    <Package className="w-4 h-4" />
+                   </div>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Vessels</p>
+                <span className="text-2xl font-black text-slate-900 tracking-tight">
+                  {(company as any).totalVessels || 0}
                 </span>
               </div>
 
