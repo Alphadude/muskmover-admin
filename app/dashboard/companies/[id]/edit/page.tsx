@@ -13,6 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { companyService } from '@/lib/services/company'
 import { SuccessModal } from '@/components/ui/success-modal'
@@ -31,6 +41,7 @@ export default function EditCompanyPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [mediaError, setMediaError] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const countryNames: Record<string, string> = {
@@ -135,7 +146,8 @@ export default function EditCompanyPage() {
         setLogo(url) // Final URL for database
         toast.success('Logo uploaded', { id: toastId })
       } catch (err: any) {
-        toast.error(err.message || 'Failed to upload logo', { id: toastId })
+        setMediaError(err.message || 'Failed to upload logo. Please check your connection or file format.')
+        toast.error('Logo upload failed')
         setLogo(null)
       } finally {
         setIsUploading(false)
@@ -162,7 +174,8 @@ export default function EditCompanyPage() {
         setBanner(url) // Final URL for database
         toast.success('Banner uploaded', { id: toastId })
       } catch (err: any) {
-        toast.error(err.message || 'Failed to upload banner', { id: toastId })
+        setMediaError(err.message || 'Failed to upload banner. Please check your connection or file format.')
+        toast.error('Banner upload failed')
         setBanner(null)
       } finally {
         setIsUploading(false)
@@ -483,6 +496,31 @@ export default function EditCompanyPage() {
           router.push('/dashboard/companies')
         }}
       />
+
+      <AlertDialog open={!!mediaError} onOpenChange={(open) => !open && setMediaError(null)}>
+        <AlertDialogContent className="rounded-2xl border-slate-200">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900">
+                Upload Error
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed">
+              {mediaError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogAction 
+              className="rounded-xl font-bold h-11 border-0 shadow-lg bg-[#050B20] hover:bg-[#050B20]/90 transition-transform active:scale-95 px-8"
+            >
+              Okay, I'll fix it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

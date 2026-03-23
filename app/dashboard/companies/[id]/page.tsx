@@ -105,6 +105,8 @@ export default function CompanyDetailPage() {
       await companyService.update(companyId, { verificationStatus: newStatus })
       setCompany({ ...company, verificationStatus: newStatus })
       toast.success(`Company status updated to ${newStatus}`, { id: toastId })
+      // Refresh to ensure any server components or global state are in sync
+      router.refresh()
     } catch (err: any) {
       toast.error(err.message || 'Failed to update status', { id: toastId })
     }
@@ -443,18 +445,20 @@ export default function CompanyDetailPage() {
               </Button>
               <Button 
                 onClick={() => { setActionType('approve'); setIsModalOpen(true); }}
-                className="flex-1 h-12 rounded-xl bg-[#EA580C] hover:bg-[#D44D0A] font-bold shadow-[#EA580C]/20 shadow-lg border-0 transition-transform hover:scale-105 active:scale-95"
+                disabled={company.verificationStatus === 'verified'}
+                className="flex-1 h-12 rounded-xl bg-[#EA580C] hover:bg-[#D44D0A] font-bold shadow-[#EA580C]/20 shadow-lg border-0 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
               >
-                Approve Business
+                {company.verificationStatus === 'verified' ? 'Already Verified' : 'Approve Business'}
               </Button>
             </div>
             <div className="flex gap-3 mt-3">
               <Button 
                 onClick={() => { setActionType('suspend'); setIsModalOpen(true); }}
+                disabled={company.verificationStatus === 'unverified'}
                 variant="outline" 
-                className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold transition-all"
+                className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold transition-all disabled:opacity-50 disabled:bg-slate-50"
               >
-                Suspend Account
+                {company.verificationStatus === 'unverified' ? 'Account Suspended' : 'Suspend Account'}
               </Button>
               <Button 
                 onClick={() => { setActionType('delete'); setIsModalOpen(true); }}
