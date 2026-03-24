@@ -2,10 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Save, Upload, X, Image as ImageIcon, Loader2, Package, Anchor } from 'lucide-react'
+import { ChevronRight, Save, Upload, X, Image as ImageIcon, Loader2, Package, Anchor, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Select,
   SelectContent,
@@ -27,6 +37,7 @@ export default function AddEquipmentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [images, setImages] = useState<string[]>([])
+  const [mediaError, setMediaError] = useState<string | null>(null)
   const [companies, setCompanies] = useState<MarineCompany[]>([])
 
   useEffect(() => {
@@ -60,9 +71,11 @@ export default function AddEquipmentPage() {
       type
     })
 
+    // Handle different possible response structures
     const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
     if (!url) {
-      throw new Error('Upload failed: No URL returned from server')
+      const errorMsg = (response as any).message || (response as any).error || 'No URL returned from server'
+      throw new Error(`Platform Error: ${errorMsg}`)
     }
     return url
   }
@@ -98,16 +111,22 @@ export default function AddEquipmentPage() {
       
       await equipmentService.create({
         name: data.name as string,
-        category: (activeTab === 'vessel' ? 'vessels' : data.category) as EquipmentCategory,
+        category: (activeTab === 'vessel' ? 'vessels' : data.category) as any,
         companyId: data.companyId as string,
         description: data.description as string,
-        availability: data.availability as string || 'available',
+        availability: (data.availability as string)?.toLowerCase() || 'available',
+        status: (data.availability as string) || 'Available', // Backend might expect 'status'
         condition: data.condition as string || 'excellent',
-        images: images,
+        // Backend expects String or Null for images, not Array
+        images: images.length > 0 ? images[0] : null, 
         hourlyRate: Number(data.hourlyRate) || 0,
         dailyRate: Number(data.dailyRate) || 0,
         monthlyRate: Number(data.monthlyRate) || 0,
-        specifications: activeTab === 'vessel' ? { vesselType: data.category as string } : {},
+        yearManufactured: Number(data.yearManufactured) || Number(data.yearBuilt) || null,
+        specifications: activeTab === 'vessel' ? { 
+          vesselType: data.vesselType as string,
+          yearBuilt: data.yearBuilt as string 
+        } : {},
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as any)
@@ -115,6 +134,8 @@ export default function AddEquipmentPage() {
       setShowSuccess(true)
       toast.success(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} added successfully!`)
     } catch (err: any) {
+      console.error('Submission error:', err)
+      setMediaError(err.message || 'An unexpected error occurred while creating the asset.')
       toast.error(err.message || 'Failed to create asset')
     } finally {
       setIsSubmitting(false)
@@ -440,6 +461,31 @@ export default function AddEquipmentPage() {
           window.location.reload()
         }}
       />
+
+      <AlertDialog open={!!mediaError} onOpenChange={(open) => !open && setMediaError(null)}>
+        <AlertDialogContent className="rounded-2xl border-slate-200">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900">
+                Action Error
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed whitespace-pre-wrap">
+              {mediaError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogAction 
+              className="rounded-xl font-bold h-11 border-0 shadow-lg bg-[#050B20] hover:bg-[#050B20]/90 transition-transform active:scale-95 px-8"
+            >
+              Okay, I'll fix it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -120,9 +120,11 @@ export default function EditCompanyPage() {
       type
     })
 
+    // Handle different possible response structures
     const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
     if (!url) {
-      throw new Error('Upload failed: No URL returned from server')
+      const errorMsg = (response as any).message || (response as any).error || 'No URL returned from server'
+      throw new Error(`Platform Error: ${errorMsg}`)
     }
     return url
   }
@@ -146,7 +148,8 @@ export default function EditCompanyPage() {
         setLogo(url) // Final URL for database
         toast.success('Logo uploaded', { id: toastId })
       } catch (err: any) {
-        setMediaError(err.message || 'Failed to upload logo. Please check your connection or file format.')
+        console.error('Logo upload detailed error:', err)
+        setMediaError(err.message || 'An unexpected error occurred during logo upload.')
         toast.error('Logo upload failed')
         setLogo(null)
       } finally {
@@ -174,7 +177,8 @@ export default function EditCompanyPage() {
         setBanner(url) // Final URL for database
         toast.success('Banner uploaded', { id: toastId })
       } catch (err: any) {
-        setMediaError(err.message || 'Failed to upload banner. Please check your connection or file format.')
+        console.error('Banner upload detailed error:', err)
+        setMediaError(err.message || 'An unexpected error occurred during banner upload.')
         toast.error('Banner upload failed')
         setBanner(null)
       } finally {

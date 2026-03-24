@@ -19,7 +19,8 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || response.statusText || 'Request failed');
+    const message = errorData.error || errorData.message || response.statusText || 'Request failed';
+    throw new Error(message);
   }
 
   return response.json();
