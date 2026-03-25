@@ -51,9 +51,24 @@ export default function OrdersPage() {
           companyService.getAll()
         ])
         
-        const ordersArray = Array.isArray(ordersData) ? ordersData : (ordersData as any)?.orders || (ordersData as any)?.data || []
-        const equipmentArray = Array.isArray(equipmentData) ? equipmentData : (equipmentData as any)?.equipment || (equipmentData as any)?.data || []
-        const companiesArray = Array.isArray(companiesData) ? companiesData : (companiesData as any)?.companies || (companiesData as any)?.data || []
+        // Robust unwrapping for all sources
+        const ordersArray = 
+          (ordersData as any).data?.orders || 
+          (ordersData as any).orders || 
+          (Array.isArray((ordersData as any).data) ? (ordersData as any).data : null) ||
+          (Array.isArray(ordersData) ? ordersData : [])
+
+        const equipmentArray = 
+          (equipmentData as any).data?.equipment || 
+          (equipmentData as any).equipment || 
+          (Array.isArray((equipmentData as any).data) ? (equipmentData as any).data : null) ||
+          (Array.isArray(equipmentData) ? equipmentData : [])
+
+        const companiesArray = 
+          (companiesData as any).data?.companies || 
+          (companiesData as any).companies || 
+          (Array.isArray((companiesData as any).data) ? (companiesData as any).data : null) ||
+          (Array.isArray(companiesData) ? companiesData : [])
         
         setOrders(ordersArray)
         setEquipmentList(equipmentArray)
@@ -71,9 +86,15 @@ export default function OrdersPage() {
   const filteredOrders = useMemo(() => {
     return orders
       .filter((order) => {
+        if (!searchTerm) return true
+        
+        const term = searchTerm.toLowerCase()
         const matchesSearch =
-          order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.rentedBy.toLowerCase().includes(searchTerm.toLowerCase())
+          String(order.id).toLowerCase().includes(term) ||
+          (order.orderNumber || '').toLowerCase().includes(term) ||
+          (order.renterName || '').toLowerCase().includes(term) ||
+          (order.renterEmail || '').toLowerCase().includes(term)
+          
         return matchesSearch
       })
       .sort((a, b) => {
@@ -81,10 +102,12 @@ export default function OrdersPage() {
         const aValue = a[sortBy as keyof Order]
         const bValue = b[sortBy as keyof Order]
 
-        if (aValue instanceof Date && bValue instanceof Date) {
+        if (!aValue || !bValue) return 0
+
+        if (sortBy === 'startDate' || sortBy === 'endDate') {
           return sortDirection === 'asc'
-            ? aValue.getTime() - bValue.getTime()
-            : bValue.getTime() - aValue.getTime()
+            ? new Date(aValue as string).getTime() - new Date(bValue as string).getTime()
+            : new Date(bValue as string).getTime() - new Date(aValue as string).getTime()
         }
 
         if (typeof aValue === 'string') {
@@ -97,7 +120,7 @@ export default function OrdersPage() {
           ? (aValue as number) - (bValue as number)
           : (bValue as number) - (aValue as number)
       })
-  }, [searchTerm, sortBy, sortDirection])
+  }, [orders, searchTerm, sortBy, sortDirection])
 
   const handleSort = (key: keyof Order | 'actions') => {
     if (sortBy === key) {
@@ -108,12 +131,12 @@ export default function OrdersPage() {
     }
   }
 
-  const getEquipmentName = (equipmentId: string) => {
-    return equipmentList.find((e) => e.id === equipmentId)?.name || 'Unknown'
+  const getEquipmentName = (equipmentId: number | string) => {
+    return equipmentList.find((e) => Number(e.id) === Number(equipmentId))?.name || 'Unknown Asset'
   }
 
-  const getCompanyName = (companyId: string) => {
-    return companies.find((c) => c.id === companyId)?.name || 'Unknown'
+  const getCompanyName = (companyId: number | string) => {
+    return companies.find((c) => Number(c.id) === Number(companyId))?.name || 'Unknown Company'
   }
 
 

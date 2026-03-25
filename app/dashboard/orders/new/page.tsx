@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Save, Calendar, User, Package, CreditCard, Ship, TrendingUp } from 'lucide-react'
+import { ChevronRight, Save, Calendar, User, Package, CreditCard, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -12,21 +12,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { orderService } from '@/lib/services/order'
 import { equipmentService } from '@/lib/services/equipment'
 import { Equipment, Order } from '@/lib/types'
-
-const inputCls =
-  'w-full h-12 rounded-xl border-slate-200 bg-white text-sm placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-900 font-bold transition-all shadow-sm'
-const selectCls =
-  'w-full h-12 rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-slate-900 font-bold shadow-sm'
+import { SuccessModal } from '@/components/ui/success-modal'
 
 export default function NewOrderPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingItems, setIsLoadingItems] = useState(true)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
   const [vesselsList, setVesselsList] = useState<any[]>([])
   
@@ -52,8 +60,17 @@ export default function NewOrderPage() {
           equipmentService.getAllVessels()
         ])
         
-        const eqData = (eqRes as any).data?.equipment || (eqRes as any).equipment || (Array.isArray(eqRes) ? eqRes : [])
-        const vData = (vRes as any).data?.vessels || (vRes as any).vessels || (Array.isArray(vRes) ? vRes : [])
+        const eqData = 
+          (eqRes as any).data?.equipment || 
+          (eqRes as any).equipment || 
+          (Array.isArray((eqRes as any).data) ? (eqRes as any).data : null) ||
+          (Array.isArray(eqRes) ? eqRes : [])
+
+        const vData = 
+          (vRes as any).data?.vessels || 
+          (vRes as any).vessels || 
+          (Array.isArray((vRes as any).data) ? (vRes as any).data : null) ||
+          (Array.isArray(vRes) ? vRes : [])
         
         setEquipmentList(eqData)
         setVesselsList(vData)
@@ -99,14 +116,15 @@ export default function NewOrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSubmissionError(null)
     
     try {
       await orderService.create(formData)
-      toast.success('Lease agreement created', {
-        description: `Order ${formData.orderNumber} has been recorded.`
-      })
-      router.push('/dashboard/orders')
+      setShowSuccess(true)
+      toast.success('Lease agreement created successfully!')
     } catch (err: any) {
+      console.error('Submission error:', err)
+      setSubmissionError(err.message || 'An unexpected error occurred while generating the lease order.')
       toast.error(err.message || 'Failed to create order')
     } finally {
       setIsSubmitting(false)
@@ -115,169 +133,253 @@ export default function NewOrderPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-24">
-      {/* Premium Header */}
-      <div className="flex items-center justify-between mb-12">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-            <span className="hover:text-[#EA580C] cursor-pointer transition-colors" onClick={() => router.push('/dashboard/orders')}>Bookings</span>
-            <ChevronRight className="w-3 h-3 text-slate-300" />
-            <span className="text-slate-900">New Lease Order</span>
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Initiate Agreement</h1>
+      {/* Breadcrumb - Aligned with Equipment pattern */}
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-8">
+        <span
+          className="hover:text-foreground cursor-pointer transition-colors font-medium"
+          onClick={() => router.push('/dashboard')}
+        >
+          Dashboard
+        </span>
+        <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+        <span
+          className="hover:text-foreground cursor-pointer transition-colors font-medium"
+          onClick={() => router.push('/dashboard/orders')}
+        >
+          Orders
+        </span>
+        <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+        <span className="text-slate-900 font-bold">New Lease Order</span>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-10">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Initiate Agreement</h1>
+          <p className="text-sm text-slate-500 italic">Generate a professional maritime lease documentation</p>
         </div>
-        <Badge className="bg-orange-50 text-[#EA580C] border-orange-100 font-black text-[10px] px-3 py-1.5 rounded-lg">
+        <Badge className="bg-orange-50 text-[#EA580C] border-orange-100 font-bold text-[10px] px-3 py-1.5 rounded-lg shadow-sm">
            DRAFT #{formData.orderNumber?.split('-')[1]}
         </Badge>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* Left: Customer & Asset */}
-        <div className="space-y-10">
-          <section className="space-y-6">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-[#EA580C] pl-4">Renter Identity</h2>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Full Name / Entity</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    value={formData.renterName} 
-                    onChange={e => handleInputChange('renterName', e.target.value)}
-                    placeholder="e.g. Chevron Nigeria Ltd" 
-                    required 
-                    className={`${inputCls} pl-12`} 
-                  />
+      <form onSubmit={handleSubmit} className="space-y-10">
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left: Identity & Asset Selection (Unified Card) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-8 space-y-10">
+            {/* Identity */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                 <div className="w-1.5 h-5 bg-primary rounded-full" />
+                 Renter Identity
+              </h2>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Full Name / Entity</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      value={formData.renterName} 
+                      onChange={e => handleInputChange('renterName', e.target.value)}
+                      placeholder="e.g. Chevron Nigeria Ltd" 
+                      required 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900 pl-12" 
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Contact Email</label>
-                <Input 
-                  value={formData.renterEmail} 
-                  onChange={e => handleInputChange('renterEmail', e.target.value)}
-                  type="email"
-                  placeholder="procurement@entity.com" 
-                  required 
-                  className={inputCls} 
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-6">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-slate-900 pl-4">Asset Selection</h2>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Select Machinery or Vessel</label>
-              <Select onValueChange={handleAssetSelect} required>
-                <SelectTrigger className={selectCls}>
-                  <SelectValue placeholder={isLoadingItems ? "Loading Assets..." : "Choose Asset"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {equipmentList.length > 0 && (
-                    <div className="px-2 py-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">Equipments</div>
-                  )}
-                  {equipmentList.map(item => (
-                    <SelectItem key={`e-${item.id}`} value={`equipment:${item.id}`}>
-                      {item.name} (₦{Number(item.dailyRate).toLocaleString()}/day)
-                    </SelectItem>
-                  ))}
-                  {vesselsList.length > 0 && (
-                    <div className="px-2 py-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2 border-t border-slate-50">Vessels</div>
-                  )}
-                  {vesselsList.map(v => (
-                    <SelectItem key={`v-${v.id}`} value={`vessel:${v.id}`}>
-                      {v.name} (₦{Number(v.dailyRate).toLocaleString()}/day)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </section>
-        </div>
-
-        {/* Right: Lease Duration & Financials */}
-        <div className="space-y-10">
-          <section className="space-y-6">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-[#050B20] pl-4">Lease Duration</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 text-center block">Mobilization</label>
-                <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Email</label>
                   <Input 
-                    type="date" 
-                    value={formData.startDate}
-                    onChange={e => handleInputChange('startDate', e.target.value)}
+                    value={formData.renterEmail} 
+                    onChange={e => handleInputChange('renterEmail', e.target.value)}
+                    type="email"
+                    placeholder="procurement@entity.com" 
                     required 
-                    className={`${inputCls} pl-12`} 
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 text-center block">Demobilization</label>
-                <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    type="date" 
-                    value={formData.endDate}
-                    onChange={e => handleInputChange('endDate', e.target.value)}
-                    required 
-                    className={`${inputCls} pl-12`} 
+                    className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
                   />
                 </div>
               </div>
             </div>
-          </section>
 
-          <section className="bg-[#050B20] rounded-3xl p-8 text-white space-y-8 shadow-2xl shadow-slate-300">
-            <div className="flex items-center justify-between">
-              <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                <CreditCard className="w-5 h-5 text-[#EA580C]" />
-              </div>
-              <div className="text-right">
-                <p className="text-[8px] font-black uppercase tracking-widest text-white/40">Total Valuations</p>
-                <p className="text-3xl font-black tracking-tighter mt-1">₦{formData.totalPrice?.toLocaleString()}</p>
-              </div>
-            </div>
+            <div className="h-px bg-slate-100" />
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Asset Selection */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                 <div className="w-1.5 h-5 bg-primary rounded-full" />
+                 Asset Selection
+              </h2>
               <div className="space-y-1.5">
-                <label className="text-[8px] font-black uppercase tracking-widest text-white/30 ml-1">Order Status</label>
-                <Select value={formData.status} onValueChange={v => handleInputChange('status', v)}>
-                   <SelectTrigger className="bg-white/5 border-white/10 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                      <SelectValue />
-                   </SelectTrigger>
-                   <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                   </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[8px] font-black uppercase tracking-widest text-white/30 ml-1">Payment</label>
-                <Select value={formData.paymentStatus} onValueChange={v => handleInputChange('paymentStatus', v)}>
-                   <SelectTrigger className="bg-white/5 border-white/10 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                      <SelectValue />
-                   </SelectTrigger>
-                   <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="refunded">Refunded</SelectItem>
-                   </SelectContent>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Machinery or Vessel</label>
+                <Select onValueChange={handleAssetSelect} required>
+                  <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900 text-slate-700">
+                    <SelectValue placeholder={isLoadingItems ? "Synchronizing Assets..." : "Choose an Asset"} />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {equipmentList.length > 0 && (
+                      <div className="px-2 py-1.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50">Equipments</div>
+                    )}
+                    {equipmentList.map(item => (
+                      <SelectItem key={`e-${item.id}`} value={`equipment:${item.id}`} className="rounded-lg">
+                        {item.name} (₦{Number(item.dailyRate).toLocaleString()}/day)
+                      </SelectItem>
+                    ))}
+                    {vesselsList.length > 0 && (
+                      <div className="px-2 py-1.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2 border-t border-slate-50 bg-slate-50/50">Vessels</div>
+                    )}
+                    {vesselsList.map(v => (
+                      <SelectItem key={`v-${v.id}`} value={`vessel:${v.id}`} className="rounded-lg">
+                        {v.name} (₦{Number(v.dailyRate).toLocaleString()}/day)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             </div>
+          </div>
 
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full h-14 rounded-2xl bg-[#EA580C] hover:bg-[#EA580C]/90 text-white font-black text-sm transition-all active:scale-[0.98]"
-            >
-              {isSubmitting ? "PROCESSING AGREEMENT..." : "GENERATE LEASE ORDER"}
-            </Button>
-          </section>
+          {/* Right: Duration & Financial summary */}
+          <div className="space-y-8">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 space-y-8">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                 <div className="w-1.5 h-5 bg-primary rounded-full" />
+                 Lease Duration
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Mobilization</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      type="date" 
+                      value={formData.startDate}
+                      onChange={e => handleInputChange('startDate', e.target.value)}
+                      required 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900 pl-12" 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Demobilization</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      type="date" 
+                      value={formData.endDate}
+                      onChange={e => handleInputChange('endDate', e.target.value)}
+                      required 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900 pl-12" 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Card (High-Contrast) */}
+            <div className="bg-[#050B20] rounded-2xl p-8 text-white space-y-8 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                  <CreditCard className="w-5 h-5 text-[#EA580C]" />
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">Total Valuation</p>
+                  <p className="text-3xl font-black tracking-tighter">₦{formData.totalPrice?.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Booking Status</label>
+                  <Select value={formData.status} onValueChange={v => handleInputChange('status', v)}>
+                     <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white">
+                        <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent className="rounded-xl">
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                     </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Payment Type</label>
+                  <Select value={formData.paymentStatus} onValueChange={v => handleInputChange('paymentStatus', v)}>
+                     <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white">
+                        <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent className="rounded-xl">
+                        <SelectItem value="pending">Due on Recipt</SelectItem>
+                        <SelectItem value="paid">Prepaid</SelectItem>
+                        <SelectItem value="refunded">Escrow</SelectItem>
+                     </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full h-14 rounded-xl bg-[#EA580C] hover:bg-[#EA580C]/90 text-white font-bold text-base transition-all active:scale-[0.98] shadow-lg shadow-orange-950/20"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    GENERATING...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-3">
+                    <Save className="w-5 h-5" />
+                    GENERATE LEASE ORDER
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
+
+      <SuccessModal 
+        isOpen={showSuccess}
+        onClose={() => {
+          setShowSuccess(false)
+          router.push('/dashboard/orders')
+        }}
+        title="Lease Agreement Generated!"
+        message={`Order ${formData.orderNumber} has been successfully recorded in the system. The agreement is now in ${formData.status} status.`}
+        actionLabel="View All Orders"
+        onAction={() => router.push('/dashboard/orders')}
+        secondaryActionLabel="Open in Workspace"
+        onSecondaryAction={() => {
+          setShowSuccess(false)
+          router.push('/dashboard/orders')
+        }}
+      />
+
+      <AlertDialog open={!!submissionError} onOpenChange={(open) => !open && setSubmissionError(null)}>
+        <AlertDialogContent className="rounded-2xl border-slate-200">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900">
+                Action Error
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-slate-600 text-base leading-relaxed whitespace-pre-wrap">
+              {submissionError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogAction 
+              className="rounded-xl font-bold h-11 border-0 shadow-lg bg-[#050B20] hover:bg-[#050B20]/90 transition-transform active:scale-95 px-8"
+            >
+              Okay, I'll check
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
