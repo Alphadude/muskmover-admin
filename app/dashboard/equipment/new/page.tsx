@@ -110,23 +110,19 @@ export default function AddEquipmentPage() {
       const data = Object.fromEntries(formData.entries())
       
       await equipmentService.create({
+        id: 0, // Schema shows id: 0
         name: data.name as string,
-        category: (activeTab === 'vessel' ? 'vessels' : data.category) as any,
-        companyId: data.companyId as string,
-        description: data.description as string,
-        availability: (data.availability as string)?.toLowerCase() || 'available',
-        status: (data.availability as string) || 'Available', // Backend might expect 'status'
-        condition: data.condition as string || 'excellent',
-        // Backend expects String or Null for images, not Array
-        images: images.length > 0 ? images[0] : null, 
+        category: (activeTab === 'vessel' ? 'vessels' : data.category) as string,
+        companyId: Number(data.companyId) || 0,
+        details: data.details as string,
+        status: (data.status as string) || 'Available',
+        condition: data.condition as string || 'Excellent',
+        images: images.length > 0 ? images.join(',') : null, 
+        weight: Number(data.weight) || 0,
+        yearManufactured: Number(data.yearManufactured) || Number(data.yearBuilt) || 0,
         hourlyRate: Number(data.hourlyRate) || 0,
         dailyRate: Number(data.dailyRate) || 0,
         monthlyRate: Number(data.monthlyRate) || 0,
-        yearManufactured: Number(data.yearManufactured) || Number(data.yearBuilt) || null,
-        specifications: activeTab === 'vessel' ? { 
-          vesselType: data.vesselType as string,
-          yearBuilt: data.yearBuilt as string 
-        } : {},
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as any)
@@ -224,31 +220,31 @@ export default function AddEquipmentPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 flex-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Availability Status</label>
-                  <Select name="availability" defaultValue="available">
+                  <Select name="status" defaultValue="Available">
                     <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900 text-slate-700">
                       <SelectValue placeholder="Availability" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="rented">Rented</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="unavailable">Unavailable</SelectItem>
+                      <SelectItem value="Available">Available</SelectItem>
+                      <SelectItem value="Rented">Rented</SelectItem>
+                      <SelectItem value="Maintenance">Maintenance</SelectItem>
+                      <SelectItem value="Unavailable">Unavailable</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 flex-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Current Condition</label>
-                  <Select name="condition" defaultValue="excellent">
+                  <Select name="condition" defaultValue="Excellent">
                     <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900 text-slate-700">
                       <SelectValue placeholder="Condition" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="fair">Fair</SelectItem>
-                      <SelectItem value="poor">Poor</SelectItem>
+                      <SelectItem value="Excellent">Excellent</SelectItem>
+                      <SelectItem value="Good">Good</SelectItem>
+                      <SelectItem value="Fair">Fair</SelectItem>
+                      <SelectItem value="Poor">Poor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -278,7 +274,7 @@ export default function AddEquipmentPage() {
               </div>
 
               {activeTab === 'equipment' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
                     <Select name="category" required>
@@ -297,6 +293,10 @@ export default function AddEquipmentPage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Weight (kg)</label>
+                    <Input name="weight" type="number" placeholder="0" className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" />
+                  </div>
+                  <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Year Manufactured</label>
                     <Input 
                       name="yearManufactured"
@@ -309,22 +309,26 @@ export default function AddEquipmentPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vessel Type</label>
-                    <Input name="vesselType" placeholder="e.g. Utility OVS" className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" />
+                    <Input name="vesselType" placeholder="Utility OVS" className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Weight (Tons)</label>
+                    <Input name="weight" type="number" placeholder="0" className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Year Built/Rebuilt</label>
-                    <Input name="yearBuilt" placeholder="e.g. 1980 / 2015" className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" />
+                    <Input name="yearBuilt" placeholder="1980 / 2015" className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" />
                   </div>
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description & Specs</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Technical Details & Specs</label>
                 <Textarea
-                  name="description"
+                  name="details"
                   placeholder="Technical details, features, specifications, and use cases..."
                   className="rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900 min-h-[120px] p-4"
                 />

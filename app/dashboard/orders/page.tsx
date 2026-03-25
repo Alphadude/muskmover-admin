@@ -134,37 +134,37 @@ export default function OrdersPage() {
 
   const columns = [
     {
-      key: 'id' as const,
-      label: 'Order ID',
+      key: 'orderNumber' as const,
+      label: 'Order #',
       sortable: true,
       width: '15%',
       render: (value: string) => (
-        <span className="font-mono text-sm text-primary">{value}</span>
+        <span className="font-mono text-xs font-black text-slate-400 uppercase tracking-widest">{value || 'UNSET'}</span>
       ),
     },
     {
-      key: 'rentedBy' as const,
-      label: 'Rented By',
+      key: 'renterName' as const,
+      label: 'Renter',
       sortable: true,
       width: '18%',
       render: (value: string, item: Order) => (
         <div>
-          <p className="font-medium text-foreground">{value}</p>
-          <p className="text-xs text-muted-foreground">{item.renterEmail}</p>
+          <p className="font-bold text-slate-900">{value}</p>
+          <p className="text-[10px] font-medium text-slate-400">{item.renterEmail}</p>
         </div>
       ),
     },
     {
       key: 'equipmentId' as const,
-      label: 'Equipment',
+      label: 'Asset',
       width: '20%',
-      render: (value: string, item: Order) => (
+      render: (value: number, item: Order) => (
         <div>
-          <p className="font-medium text-foreground">
-            {getEquipmentName(value)}
+          <p className="font-bold text-slate-900">
+            {getEquipmentName(String(value))}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {getCompanyName(item.companyId)}
+          <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
+            ID: {value || item.vesselId}
           </p>
         </div>
       ),
@@ -174,12 +174,12 @@ export default function OrdersPage() {
       label: 'Duration',
       sortable: true,
       width: '15%',
-      render: (value: Date, item: Order) => (
+      render: (value: string, item: Order) => (
         <div className="text-sm">
-          <p className="text-foreground">
+          <p className="text-slate-900 font-bold">
             {new Date(value).toLocaleDateString()}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] font-medium text-slate-400">
             to {new Date(item.endDate).toLocaleDateString()}
           </p>
         </div>
@@ -187,11 +187,11 @@ export default function OrdersPage() {
     },
     {
       key: 'totalPrice' as const,
-      label: 'Total Price',
+      label: 'Total Value',
       sortable: true,
       width: '12%',
       render: (value: number) => (
-        <span className="font-semibold text-foreground">
+        <span className="font-black text-slate-900">
           ₦{value.toLocaleString()}
         </span>
       ),
@@ -212,7 +212,7 @@ export default function OrdersPage() {
         return (
           <div className="flex items-center gap-2">
             {getStatusIcon(value)}
-            <Badge variant={variants[value] || 'secondary'}>{value}</Badge>
+            <Badge variant={variants[value] || 'secondary'} className="rounded-md font-bold text-[10px] uppercase">{value}</Badge>
           </div>
         )
       },
@@ -224,6 +224,7 @@ export default function OrdersPage() {
       render: (value: string) => (
         <Badge
           variant={value === 'paid' ? 'default' : 'secondary'}
+          className={`${value === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'} border-none rounded-md font-bold text-[10px] uppercase`}
         >
           {value}
         </Badge>
@@ -233,7 +234,7 @@ export default function OrdersPage() {
       key: 'actions' as const,
       label: 'Actions',
       width: '8%',
-      render: () => (
+      render: (_: any, item: Order) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -241,9 +242,10 @@ export default function OrdersPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>View Details</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push(`/dashboard/orders/${item.id}`)}>
+               View Details
+            </DropdownMenuItem>
             <DropdownMenuItem>Print Invoice</DropdownMenuItem>
-            <DropdownMenuItem>Send Message</DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">
               Cancel Order
             </DropdownMenuItem>
@@ -273,7 +275,10 @@ export default function OrdersPage() {
             <Download className="w-3.5 h-3.5" />
             Export
           </Button>
-          <Button className="gap-2 h-9 px-4 rounded-lg bg-[#050B20] hover:bg-[#050B20]/90 text-white text-sm font-medium">
+          <Button 
+            onClick={() => router.push('/dashboard/orders/new')}
+            className="gap-2 h-9 px-4 rounded-lg bg-[#050B20] hover:bg-[#050B20]/90 text-white text-sm font-medium"
+          >
             <Plus className="w-3.5 h-3.5" />
             Create Order
           </Button>

@@ -18,56 +18,44 @@ export interface MarineCompany {
   phone: string
   logo?: string
   banner?: string
-  verificationStatus: CompanyVerificationStatus
-  rating: number
-  totalEquipment: number
-  totalOrders: number
-  totalRevenue: number
-  joinedDate: Date
-  createdAt?: string | Date
-  description?: string
   postalCode?: string
+  verificationStatus: CompanyVerificationStatus
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Equipment {
-  id: string
-  companyId: string
+  id: number
+  companyId: number
+  status: string
+  condition: string
   name: string
-  category: EquipmentCategory
-  description: string
-  condition: EquipmentCondition
-  availability: EquipmentAvailability
+  category: string
+  details: string
+  weight: number
+  yearManufactured: number
   hourlyRate: number
   dailyRate: number
   monthlyRate: number
   images: string[]
-  specifications: Record<string, string>
-  weight?: number
-  dimensions?: {
-    length: number
-    width: number
-    height: number
-  }
-  yearManufactured?: number
-  maintenanceDate?: Date
-  createdAt: Date
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Order {
-  id: string
-  equipmentId: string
-  companyId: string
-  rentedBy: string
+  id: number
+  orderNumber: string
+  renterName: string
   renterEmail: string
-  renterPhone?: string
-  startDate: Date
-  endDate: Date
-  status: OrderStatus
+  equipmentId: number
+  vesselId: number
+  startDate: string
+  endDate: string
   totalPrice: number
-  paymentMethod: 'credit_card' | 'bank_transfer' | 'cash'
-  paymentStatus: 'pending' | 'paid' | 'refunded'
-  notes?: string
-  createdAt: Date
+  status: string
+  paymentStatus: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface AdminUser {

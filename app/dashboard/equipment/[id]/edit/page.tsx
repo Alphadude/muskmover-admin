@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, Save, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { ChevronRight, Save, Upload, X, Package, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,98 +13,136 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { equipmentService } from '@/lib/services/equipment'
 import { companyService } from '@/lib/services/company'
 import { Equipment, MarineCompany } from '@/lib/types'
 
-type Tab = 'equipment' | 'vessel'
-
 const inputCls =
-  'w-full h-12 rounded-lg border-slate-300 bg-white text-sm placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-900 font-medium'
+  'w-full h-12 rounded-xl border-slate-200 bg-white text-sm placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-900 font-bold transition-all shadow-sm'
 const selectCls =
-  'w-full h-12 rounded-lg border-slate-300 bg-white text-sm focus:ring-1 focus:ring-slate-900 font-medium'
+  'w-full h-12 rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-slate-900 font-bold shadow-sm'
 
 export default function EditEquipmentPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
   
-  const [activeTab, setActiveTab] = useState<Tab>('equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [images, setImages] = useState<string[]>([])
-  const [equipment, setEquipment] = useState<Equipment | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [companies, setCompanies] = useState<MarineCompany[]>([])
   const [error, setError] = useState('')
+  
+  // Controlled form state
+  const [formData, setFormData] = useState<Partial<Equipment>>({
+    name: '',
+    category: '',
+    details: '',
+    companyId: '',
+    availability: 'available',
+    condition: 'excellent',
+    weight: 0,
+    yearManufactured: new Date().getFullYear(),
+    hourlyRate: 0,
+    dailyRate: 0,
+    monthlyRate: 0,
+    images: []
+  })
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [item, companiesData] = await Promise.all([
-          equipmentService.getById(id),
-          companyService.getAll()
-        ])
-        setEquipment(item)
-        const companiesArray = Array.isArray(companiesData) ? companiesData : (companiesData as any)?.companies || (companiesData as any)?.data || []
-        setCompanies(companiesArray)
-        setImages(item.images || [])
-        setActiveTab(item.category === 'vessels' ? 'vessel' : 'equipment')
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch edit data')
-        toast.error('Failed to load asset details')
-      }
-    }
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const [equipmentResponse, companiesResponse] = await Promise.all([
+        equipmentService.getById(id),
+        companyService.getAll()
+      ])
+      
+      // Handle wrappers
+      const asset = (equipmentResponse as any).data || equipmentResponse;
+      const companiesArray = (companiesResponse as any).data || (companiesResponse as any).companies || (Array.isArray(companiesResponse) ? companiesResponse : []);
+      
+      setCompanies(companiesArray)
+      
+      // Map API fields to form fields
+      const imagesArr = typeof asset.images === 'string' 
+        ? (asset.images as string).split(',').filter(Boolean) 
+        : (Array.isArray(asset.images) ? asset.images : []);
 
-    if (id) {
-      fetchData()
+      setFormData({
+        ...asset,
+        id: String(asset.id),
+        details: asset.details || asset.description || '', // Map description to details if needed
+        images: imagesArr,
+        weight: Number(asset.weight) || 0,
+        yearManufactured: Number(asset.yearManufactured) || new Date().getFullYear(),
+        hourlyRate: Number(asset.hourlyRate) || 0,
+        dailyRate: Number(asset.dailyRate) || 0,
+        monthlyRate: Number(asset.monthlyRate) || 0,
+      })
+    } catch (err: any) {
+      setError(err.message || 'Failed to load asset data')
+      toast.error('Could not load asset details')
+    } finally {
+      setIsLoading(false)
     }
   }, [id])
 
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-destructive font-medium">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()} className="mt-4">Try Again</Button>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (id) fetchData()
+  }, [fetchData])
 
-  if (!equipment) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-slate-500 font-medium">Loading asset details...</p>
-      </div>
-    )
+  const handleInputChange = (field: keyof Equipment, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
+    // In a real app, you'd upload these to Cloudinary/S3 and get URLs
+    // For this simulation, we'll use placeholder strings or data URLs
     const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-    setImages((prev) => [...prev, ...newImages])
+    setFormData(prev => ({
+      ...prev,
+      images: [...(prev.images || []), ...newImages]
+    }))
   }
 
   const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
+    setFormData(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!equipment) return
-
     setIsSubmitting(true)
+
     try {
-      // In a real app, we'd gather all form data. 
-      // For now, we'll just demonstrate the service call with existing data + any changes
-      await equipmentService.update(id, {
-        ...equipment,
-        images: images,
-      })
+      // Serialize images array back to string for backend
+      const payload = {
+        ...formData,
+        id: Number(id), // Backend expects number ID in payload usually
+        companyId: Number(formData.companyId),
+        weight: Number(formData.weight),
+        yearManufactured: Number(formData.yearManufactured),
+        hourlyRate: Number(formData.hourlyRate),
+        dailyRate: Number(formData.dailyRate),
+        monthlyRate: Number(formData.monthlyRate),
+        images: (formData.images || []).join(',')
+      }
+
+      // Remove unwanted internal fields
+      delete (payload as any)._type;
+      delete (payload as any).createdAt;
+      delete (payload as any).updatedAt;
+
+      await equipmentService.update(id, payload)
       
-      toast.success(`${activeTab === 'vessel' ? 'Vessel' : 'Equipment'} updated successfully!`, {
-        description: 'The changes have been saved to the marketplace.',
+      toast.success('Asset updated successfully', {
+        description: `${formData.name} has been synchronized with the marketplace.`
       })
       router.push(`/dashboard/equipment/${id}`)
     } catch (err: any) {
@@ -114,224 +152,244 @@ export default function EditEquipmentPage() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-[#EA580C] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Loading Asset Data</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+        <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+        <h3 className="text-lg font-black text-slate-900">Oops! Something went wrong</h3>
+        <p className="text-slate-500 font-medium mt-2 max-w-xs mx-auto">{error}</p>
+        <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 rounded-xl font-bold border-slate-200">Try Again</Button>
+      </div>
+    )
+  }
+
   return (
-    <div className="max-w-2xl mx-auto pb-16">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm text-slate-400 mb-8 font-medium">
-        <span
-          className="hover:text-slate-900 cursor-pointer transition-colors"
-          onClick={() => router.push('/dashboard')}
-        >
-          Dashboard
-        </span>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <span
-          className="hover:text-slate-900 cursor-pointer transition-colors"
-          onClick={() => router.push('/dashboard/equipment')}
-        >
-          Equipment
-        </span>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <span
-          className="hover:text-slate-900 cursor-pointer transition-colors"
-          onClick={() => router.push(`/dashboard/equipment/${id}`)}
-        >
-          {equipment.name}
-        </span>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <span className="text-slate-900 font-black">Edit Asset</span>
+    <div className="max-w-4xl mx-auto pb-24">
+      {/* Premium Header/Breadcrumb */}
+      <div className="flex items-center justify-between mb-12">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <span className="hover:text-[#EA580C] cursor-pointer transition-colors" onClick={() => router.push('/dashboard/equipment')}>Inventory</span>
+            <ChevronRight className="w-3 h-3 text-slate-300" />
+            <span className="text-slate-900">Edit {formData.name}</span>
+          </div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Edit Specification</h1>
+        </div>
+        <div className="flex items-center gap-2">
+           <Badge className="bg-white text-slate-900 border border-slate-100 font-black text-[10px] px-3 py-1.5 rounded-lg shadow-sm flex gap-1.5 items-center">
+              <CheckCircle2 className="w-3 h-3 text-green-500 fill-green-500/20" />
+              DRAFT SAVED
+           </Badge>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-12">
-        {/* Tab Indicator (Locked for Edit) */}
-        <div className="flex flex-col gap-2">
-           <h2 className="text-xl font-black text-slate-900">Editing {activeTab === 'vessel' ? 'Vessel' : 'Equipment'}</h2>
-           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Asset Type: {activeTab}</p>
-        </div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        {/* Left Column: Core Data */}
+        <div className="lg:col-span-12 space-y-12">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            {/* 1. Basic Information */}
+            <div className="space-y-6">
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-[#EA580C] pl-4">Basic Information</h2>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Asset Name</label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={e => handleInputChange('name', e.target.value)}
+                    placeholder="e.g. Caterpillar 320 GC" 
+                    required 
+                    className={inputCls} 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Category</label>
+                    <Select value={formData.category} onValueChange={v => handleInputChange('category', v)}>
+                      <SelectTrigger className={selectCls}>
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vessels">Vessels</SelectItem>
+                        <SelectItem value="cargo-equipment">Cargo Equipment</SelectItem>
+                        <SelectItem value="navigation">Navigation</SelectItem>
+                        <SelectItem value="safety">Safety</SelectItem>
+                        <SelectItem value="propulsion">Propulsion</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Asset Status</label>
+                    <Select value={formData.status || formData.availability} onValueChange={v => handleInputChange('status', v)}>
+                      <SelectTrigger className={selectCls}>
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="rented">Rented</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-        {/* ── Assign to Company (shared) ── */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-slate-900">Assign to Company</h2>
-          <div className="space-y-3">
-            <Select required defaultValue={equipment.companyId}>
-              <SelectTrigger className={selectCls}>
-                <SelectValue placeholder="Select Company" />
-              </SelectTrigger>
-              <SelectContent>
-                {(companies || []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="grid grid-cols-2 gap-3">
-              <Select defaultValue={equipment.availability}>
-                <SelectTrigger className={selectCls}>
-                  <SelectValue placeholder="Availability" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="rented">Rented</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="unavailable">Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select defaultValue={equipment.condition}>
-                <SelectTrigger className={selectCls}>
-                  <SelectValue placeholder="Condition" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excellent">Excellent</SelectItem>
-                  <SelectItem value="good">Good</SelectItem>
-                  <SelectItem value="fair">Fair</SelectItem>
-                  <SelectItem value="poor">Poor</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Technical Description</label>
+                  <Textarea
+                    value={formData.details}
+                    onChange={e => handleInputChange('details', e.target.value)}
+                    placeholder="Provide depth technical details..."
+                    className="rounded-xl border-slate-200 bg-white text-sm font-bold placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-slate-900 min-h-[120px] shadow-sm p-4 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Technical Specs & Pricing */}
+            <div className="space-y-6">
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-slate-900 pl-4">Asset Performance</h2>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Gross Weight (kg)</label>
+                    <Input 
+                      value={formData.weight || ''} 
+                      onChange={e => handleInputChange('weight', e.target.value)}
+                      type="number" 
+                      placeholder="0" 
+                      className={inputCls} 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Year Manufactured</label>
+                    <Input 
+                      value={formData.yearManufactured || ''} 
+                      onChange={e => handleInputChange('yearManufactured', e.target.value)}
+                      type="number" 
+                      placeholder="2024" 
+                      className={inputCls} 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-[#EA580C] ml-1">Company Assignment</label>
+                  <Select value={String(formData.companyId)} onValueChange={v => handleInputChange('companyId', v)}>
+                    <SelectTrigger className={`${selectCls} border-[#EA580C]/20 bg-orange-50/10`}>
+                      <SelectValue placeholder="Select Provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                   <div className="space-y-1.5">
+                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1 text-center block">Hourly (₦)</label>
+                      <Input value={formData.hourlyRate || ''} onChange={e => handleInputChange('hourlyRate', e.target.value)} type="number" className={`${inputCls} h-10 border-slate-100 text-center`} />
+                   </div>
+                   <div className="space-y-1.5">
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[#EA580C] ml-1 text-center block font-black">Daily (₦)</label>
+                      <Input value={formData.dailyRate || ''} onChange={e => handleInputChange('dailyRate', e.target.value)} type="number" className={`${inputCls} h-10 border-[#EA580C]/30 text-center bg-orange-50/10`} />
+                   </div>
+                   <div className="space-y-1.5">
+                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1 text-center block">Monthly (₦)</label>
+                      <Input value={formData.monthlyRate || ''} onChange={e => handleInputChange('monthlyRate', e.target.value)} type="number" className={`${inputCls} h-10 border-slate-100 text-center`} />
+                   </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ── EQUIPMENT TAB ── */}
-        {activeTab === 'equipment' && (
-          <>
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">Equipment Details</h2>
-              <div className="space-y-3">
-                <Input defaultValue={equipment.name} placeholder="Equipment Name" required className={inputCls} />
-                <Select required defaultValue={equipment.category}>
-                  <SelectTrigger className={selectCls}>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vessels">Vessels</SelectItem>
-                    <SelectItem value="cargo-equipment">Cargo Equipment</SelectItem>
-                    <SelectItem value="diving-gear">Diving Gear</SelectItem>
-                    <SelectItem value="navigation">Navigation</SelectItem>
-                    <SelectItem value="safety">Safety</SelectItem>
-                    <SelectItem value="propulsion">Propulsion</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  defaultValue={equipment.description}
-                  placeholder="Technical details, features, use case..."
-                  className="rounded-lg border-slate-300 bg-white text-sm font-medium placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-900 min-h-[100px]"
-                />
-              </div>
-            </div>
+          <hr className="border-slate-100" />
 
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">Dimensions & Specs</h2>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <Input defaultValue={equipment.weight} type="number" placeholder="Weight (tons)" className={inputCls} />
-                  <Input defaultValue={equipment.yearManufactured} type="number" min="1950" max={new Date().getFullYear()} placeholder="Year Manufactured" className={inputCls} />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">Pricing</h2>
-              <div className="space-y-3">
-                <Input defaultValue={equipment.hourlyRate} type="number" min="0" placeholder="Hourly Rate (₦)" className={inputCls} />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input defaultValue={equipment.dailyRate} type="number" min="0" placeholder="Daily Rate (₦)" required className={inputCls} />
-                  <Input defaultValue={equipment.monthlyRate} type="number" min="0" placeholder="Monthly Rate (₦)" className={inputCls} />
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── VESSEL TAB ── */}
-        {activeTab === 'vessel' && (
-          <>
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">Core Identity & Performance</h2>
-              <div className="space-y-3">
-                <Input defaultValue={equipment.name} placeholder="Vessel Name" required className={inputCls} />
-                <Input defaultValue={equipment.specifications.vessel_type} placeholder="Vessel Type (e.g. 1,200 BHP Security/Utility OVS/PVS)" className={inputCls} />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input defaultValue={equipment.specifications.builder} placeholder="Builder" className={inputCls} />
-                  <Input defaultValue={equipment.specifications.year_built} placeholder="Year Built / Rebuilt (e.g. 1980 / 2015)" className={inputCls} />
-                </div>
-                {/* ... other fields similarly pre-filled ... */}
-                <div className="grid grid-cols-2 gap-3">
-                   <Input defaultValue={equipment.dailyRate} type="number" min="0" placeholder="Daily Rate (₦)" className={inputCls} />
-                   <Input defaultValue={equipment.monthlyRate} type="number" min="0" placeholder="Monthly Rate (₦)" className={inputCls} />
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── MEDIA & IMAGES (shared) ── */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Media & Images</h2>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              {images.length} / 10 Images
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {(images || []).map((src, index) => (
-              <div key={index} className="relative group aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm">
-                <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 text-slate-600 hover:text-destructive shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-            {images.length < 10 && (
-              <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer group">
-                <div className="p-3 rounded-full bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
-                  <Upload className="w-5 h-5 text-slate-400" />
-                </div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Upload</span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </label>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="h-12 px-10 rounded-xl bg-[#050B20] hover:bg-[#050B20]/90 text-white font-bold text-sm shadow-lg shadow-slate-200 transition-all active:scale-95"
-          >
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Saving Changes...
+          {/* Media & Images Section */}
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-[#050B20] pl-4">Media Assets</h2>
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                {formData.images?.length || 0} / 10 VISUALS
               </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Save className="w-4 h-4" />
-                Update Asset
-              </span>
-            )}
-          </Button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            disabled={isSubmitting}
-            className="text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors px-4"
-          >
-            Cancel & Return
-          </button>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6">
+              {(formData.images || []).map((src, index) => (
+                <div key={index} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-105">
+                  <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="p-2.5 rounded-xl bg-white text-destructive shadow-xl hover:scale-110 transition-transform active:scale-90"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {(formData.images?.length || 0) < 10 && (
+                <label className="flex flex-col items-center justify-center aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-white hover:border-[#EA580C] hover:shadow-lg hover:shadow-orange-500/5 transition-all cursor-pointer group relative overflow-hidden">
+                  <div className="p-4 rounded-2xl bg-white shadow-md border border-slate-100 group-hover:bg-[#EA580C] group-hover:text-white transition-all">
+                    <Upload className="w-6 h-6 text-slate-400 group-hover:text-white transition-colors" />
+                  </div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-4">Append Visual</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-6 pt-12">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-16 px-12 rounded-2xl bg-[#050B20] hover:bg-black text-white font-black text-sm shadow-2xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  SYNCHRONIZING...
+                </span>
+              ) : (
+                <span className="flex items-center gap-3">
+                  <Save className="w-5 h-5 text-[#EA580C]" />
+                  COMMIT CHANGES
+                </span>
+              )}
+            </Button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              disabled={isSubmitting}
+              className="text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-[0.2em] px-4"
+            >
+              Discard & Abandon
+            </button>
+          </div>
         </div>
       </form>
     </div>
