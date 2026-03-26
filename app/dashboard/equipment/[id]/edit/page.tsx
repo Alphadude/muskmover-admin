@@ -31,6 +31,7 @@ export default function EditEquipmentPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
   const [companies, setCompanies] = useState<MarineCompany[]>([])
   const [error, setError] = useState('')
   
@@ -96,17 +97,57 @@ export default function EditEquipmentPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = (error) => reject(error)
+    })
+  }
 
-    // In a real app, you'd upload these to Cloudinary/S3 and get URLs
-    // For this simulation, we'll use placeholder strings or data URLs
-    const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-    setFormData(prev => ({
-      ...prev,
-      images: [...(prev.images || []), ...newImages]
-    }))
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setIsUploading(true)
+    const toastId = toast.loading('Uploading visuals to Cloudinary...')
+
+    try {
+      const uploadedUrls = []
+      for (const file of Array.from(files)) {
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`File ${file.name} is too large (max 5MB)`)
+          continue
+        }
+
+        const base64 = await fileToBase64(file)
+        const base64Data = base64.split(',')[1]
+        
+        const response = await companyService.uploadImage({
+          data: base64Data,
+          type: formData.category === 'vessels' ? 'vessel' : 'equipment'
+        })
+
+        const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
+        if (url) uploadedUrls.push(url)
+      }
+
+      if (uploadedUrls.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          images: [...(prev.images || []), ...uploadedUrls]
+        }))
+        toast.success(`Successfully uploaded ${uploadedUrls.length} file(s)`, { id: toastId })
+      } else {
+        toast.error('No files were successfully uploaded.', { id: toastId })
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Media upload failed. Please try again.', { id: toastId })
+    } finally {
+      setIsUploading(false)
+      e.target.value = ''
+    }
   }
 
   const removeImage = (index: number) => {
@@ -366,13 +407,18 @@ export default function EditEquipmentPage() {
           <div className="flex items-center gap-6 pt-12">
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
               className="h-16 px-12 rounded-2xl bg-[#050B20] hover:bg-black text-white font-black text-sm shadow-2xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-3">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   SYNCHRONIZING...
+                </span>
+              ) : isUploading ? (
+                <span className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  UPLOADING...
                 </span>
               ) : (
                 <span className="flex items-center gap-3">
