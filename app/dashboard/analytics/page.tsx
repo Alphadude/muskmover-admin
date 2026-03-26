@@ -29,6 +29,7 @@ import { TrendingUp, Download } from 'lucide-react'
 const EMPTY_ANALYTICS_DATA: DashboardData = {
   totalCompanies: 0,
   totalEquipment: 0,
+  totalOrders: 0,
   activeOrders: 0,
   monthlyRevenue: 0,
   pendingVerifications: 0,
@@ -101,7 +102,7 @@ export default function AnalyticsPage() {
 
         // 2. Equipment Utilization & Status
         const statusMap = allEquipment.reduce((acc: any, e) => {
-          const status = e.status || e.availability || 'available'
+          const status = (e.status || e.availability || 'available').toLowerCase()
           acc[status] = (acc[status] || 0) + 1
           return acc
         }, {})
@@ -124,8 +125,11 @@ export default function AnalyticsPage() {
           count: count as number
         })).sort((a, b) => b.count - a.count)
 
-        const rentedCount = allEquipment.filter(e => e.status === 'rented' || e.status === 'unavailable').length
-        const availableCount = allEquipment.filter(e => e.status === 'available').length
+        const rentedCount = allEquipment.filter(e => {
+          const s = (e.status || e.availability || '').toLowerCase()
+          return s === 'rented' || s === 'unavailable'
+        }).length
+        const availableCount = allEquipment.filter(e => (e.status || e.availability || '').toLowerCase() === 'available').length
         const totalCount = allEquipment.length || 1
         
         const utilizationTrend = [
@@ -174,6 +178,14 @@ export default function AnalyticsPage() {
     }
     fetchData()
   }, [])
+
+  const formatNaira = (value: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+    }).format(value)
+  }
 
   if (isLoading) {
     return (
@@ -268,8 +280,8 @@ export default function AnalyticsPage() {
                 <p className="font-medium text-foreground text-sm">
                   {item.month}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ₦{(item.revenue / 1000000).toFixed(1)}M
+                <p className="text-xs text-muted-foreground mt-1 font-bold">
+                  {formatNaira(item.revenue)}
                 </p>
               </div>
               {item.growth !== undefined && (

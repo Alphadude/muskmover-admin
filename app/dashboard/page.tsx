@@ -184,7 +184,8 @@ export default function Dashboard() {
         }
 
         setStats(processedStats)
-        setActivity(notifications)
+        const activeOrdersList = orders.filter(o => o.status === 'active' || o.status === 'confirmed')
+        setActivity(activeOrdersList)
       } catch (err: any) {
         console.error('Dashboard aggregation error:', err)
         setError(err.message || 'Failed to load dashboard data')
@@ -419,40 +420,52 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Recent Activity */}
+        {/* Active Orders Feed */}
         <div className="bg-white rounded-2xl border border-border/50 p-6 shadow-soft transition-all hover:shadow-md glass">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-              Recent Messages
+              Active Orders
             </h3>
             <p className="text-sm font-medium text-slate-500/80 mt-1">
-              Latest communications
+              Live lease agreements
             </p>
           </div>
           <div className="space-y-3">
-            {activity.slice(0, 4).map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all cursor-pointer group"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 text-sm truncate group-hover:text-blue-600 transition-colors">
-                      {item.title || item.senderName}
-                    </p>
-                    <p className="text-xs font-medium text-slate-500 truncate mt-0.5">
-                      {item.description || item.subject}
-                    </p>
+            {activity.length > 0 ? (
+              activity.slice(0, 5).map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all cursor-pointer group"
+                  onClick={() => window.location.href = `/dashboard/orders/${item.id}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 text-sm truncate group-hover:text-blue-600 transition-colors">
+                        {item.renterName || 'Private Client'}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 truncate mt-0.5">
+                        Order #{item.id} • {formatNaira(item.totalPrice)}
+                      </p>
+                    </div>
+                    <div className="px-2 py-1 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                      {item.status}
+                    </div>
                   </div>
-                  {(item.isRead === false || item.unread) && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] flex-shrink-0 mt-1" />
-                  )}
                 </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ShoppingCart className="w-12 h-12 text-slate-200 mb-2" />
+                <p className="text-sm font-medium text-slate-400">No active orders found</p>
               </div>
-            ))}
+            )}
           </div>
-          <Button variant="outline" className="w-full mt-6 text-xs font-bold uppercase tracking-wider h-11 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all">
-            View All Messages
+          <Button 
+            variant="outline" 
+            className="w-full mt-6 text-xs font-bold uppercase tracking-wider h-11 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all"
+            onClick={() => window.location.href = '/dashboard/orders'}
+          >
+            View All Orders
           </Button>
         </div>
       </div>
