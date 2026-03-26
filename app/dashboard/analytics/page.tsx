@@ -148,12 +148,37 @@ export default function AnalyticsPage() {
           
           const revenue = companyOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
           
+          const now = new Date()
+          const currentMonth = now.getMonth()
+          const currentYear = now.getFullYear()
+          let currentMonthRev = 0
+          let prevMonthRev = 0
+          
+          companyOrders.forEach(o => {
+            const d = new Date(o.createdAt || o.startDate || Date.now())
+            const m = d.getMonth()
+            const y = d.getFullYear()
+            
+            if (y === currentYear && m === currentMonth) {
+              currentMonthRev += (o.totalPrice || 0)
+            } else if ((m === currentMonth - 1 && y === currentYear) || (currentMonth === 0 && m === 11 && y === currentYear - 1)) {
+              prevMonthRev += (o.totalPrice || 0)
+            }
+          })
+          
+          let growth = 0
+          if (prevMonthRev > 0) {
+            growth = Math.round(((currentMonthRev - prevMonthRev) / prevMonthRev) * 100)
+          } else if (currentMonthRev > 0) {
+            growth = 100
+          }
+          
           return {
             name: c.name,
             revenue: revenue,
             orders: companyOrders.length,
             rating: Number(c.rating || 4.5),
-            growth: Math.floor(Math.random() * 20) + 5
+            growth: growth
           }
         }).sort((a, b) => b.revenue - a.revenue)
 
@@ -437,9 +462,6 @@ export default function AnalyticsPage() {
                   Orders
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
-                  Rating
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground text-left">
                   Growth
                 </th>
               </tr>
@@ -454,21 +476,16 @@ export default function AnalyticsPage() {
                     <p className="font-medium text-foreground text-left">{company.name}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-foreground text-left">
-                      ₦{(company.revenue / 1000000).toFixed(1)}M
+                    <p className="text-foreground text-left font-medium">
+                      {formatNaira(company.revenue)}
                     </p>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-foreground text-left">{company.orders}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-medium text-foreground text-left">
-                      {company.rating}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-green-500 font-semibold text-left">
-                      +{company.growth}%
+                    <span className={`font-semibold text-left ${company.growth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {company.growth > 0 ? '+' : ''}{company.growth}%
                     </span>
                   </td>
                 </tr>
