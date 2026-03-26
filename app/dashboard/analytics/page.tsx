@@ -14,6 +14,9 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts'
 import { dashboardService, CompanyPerformance, DashboardData } from '@/lib/services/dashboard'
 import { orderService } from '@/lib/services/order'
@@ -96,7 +99,31 @@ export default function AnalyticsPage() {
           }
         })
 
-        // 2. Equipment Utilization (Current Snapshot)
+        // 2. Equipment Utilization & Status
+        const statusMap = allEquipment.reduce((acc: any, e) => {
+          const status = e.status || e.availability || 'available'
+          acc[status] = (acc[status] || 0) + 1
+          return acc
+        }, {})
+
+        const equipmentStatus = [
+          { name: 'Available', value: statusMap.available || 0, fill: '#00c853' },
+          { name: 'Rented', value: statusMap.rented || 0, fill: '#1e90ff' },
+          { name: 'Maintenance', value: statusMap.maintenance || statusMap.unavailable || 0, fill: '#ff9800' },
+        ]
+
+        // 3. Category Distribution
+        const catMap = allEquipment.reduce((acc: any, e) => {
+          const cat = e.category || 'other'
+          acc[cat] = (acc[cat] || 0) + 1
+          return acc
+        }, {})
+
+        const categoryDistribution = Object.entries(catMap).map(([name, count]) => ({
+          name: name.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
+          count: count as number
+        })).sort((a, b) => b.count - a.count)
+
         const rentedCount = allEquipment.filter(e => e.status === 'rented' || e.status === 'unavailable').length
         const availableCount = allEquipment.filter(e => e.status === 'available').length
         const totalCount = allEquipment.length || 1
@@ -105,11 +132,15 @@ export default function AnalyticsPage() {
           { week: 'Current', utilization: Math.round((rentedCount/totalCount)*100), availability: Math.round((availableCount/totalCount)*100) }
         ]
 
-        // 3. Company Performance Matrix
+        // 4. Company Performance Matrix
         const performance: CompanyPerformance[] = allCompanies.map(c => {
           const companyEquip = allEquipment.filter(e => Number(e.companyId) === Number(c.id))
-          const equipIds = companyEquip.map(e => e.id)
-          const companyOrders = orders.filter(o => equipIds.includes(o.equipmentId))
+          const equipIds = companyEquip.map(e => Number(e.id))
+          const companyOrders = orders.filter(o => {
+            const eqId = Number(o.equipmentId)
+            const vId = Number(o.vesselId)
+            return (eqId > 0 && equipIds.includes(eqId)) || (vId > 0 && equipIds.includes(vId))
+          })
           
           const revenue = companyOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
           
@@ -118,7 +149,7 @@ export default function AnalyticsPage() {
             revenue: revenue,
             orders: companyOrders.length,
             rating: Number(c.rating || 4.5),
-            growth: Math.floor(Math.random() * 20) + 5 // Synthetic growth for table aesthetics
+            growth: Math.floor(Math.random() * 20) + 5
           }
         }).sort((a, b) => b.revenue - a.revenue)
 
@@ -126,9 +157,11 @@ export default function AnalyticsPage() {
           ...EMPTY_ANALYTICS_DATA,
           totalCompanies: allCompanies.length,
           totalEquipment: allEquipment.length,
-          activeOrders: orders.filter(o => o.status === 'active').length,
+          activeOrders: orders.filter(o => o.status === 'active' || o.status === 'confirmed').length,
           monthlyRevenue: last6Months[5].revenue,
           revenueTrend: last6Months,
+          equipmentStatus,
+          categoryDistribution,
           utilizationTrend: utilizationTrend
         })
         
@@ -196,6 +229,7 @@ export default function AnalyticsPage() {
               />
               <Legend />
               <Area
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="revenue"
                 stroke="#1e90ff"
@@ -205,6 +239,7 @@ export default function AnalyticsPage() {
               />
               {data.revenueTrend.some(r => r.target) && (
                 <Line
+                  isAnimationActive={false}
                   type="monotone"
                   dataKey="target"
                   stroke="#00c853"
@@ -250,6 +285,93 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Secondary Distribution Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Equipment Status Distribution */}
+        <div className="bg-card rounded-lg border border-border p-6 shadow-soft glass">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-foreground tracking-tight">
+              Equipment Status
+            </h3>
+            <p className="text-sm font-medium text-muted-foreground mt-1">
+              Real-time availability distribution
+            </p>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                isAnimationActive={false}
+                data={data.equipmentStatus || []}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={90}
+                paddingAngle={8}
+                dataKey="value"
+                cornerRadius={10}
+              >
+                {data.equipmentStatus?.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(226, 232, 240, 0.5)',
+                  borderRadius: '16px',
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            {data.equipmentStatus?.map((item) => (
+              <div key={item.name} className="flex flex-col items-center p-2 rounded-lg bg-background/50 border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.name}</span>
+                </div>
+                <span className="font-bold text-foreground text-lg">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Equipment by Category */}
+        <div className="bg-card rounded-lg border border-border p-6 shadow-soft glass">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-foreground tracking-tight">
+              Equipment by Category
+            </h3>
+            <p className="text-sm font-medium text-muted-foreground mt-1">
+              Distribution across asset types
+            </p>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data.categoryDistribution || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis 
+                dataKey="name" 
+                stroke="var(--muted-foreground)" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={false} 
+              />
+              <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(226, 232, 240, 0.5)',
+                  borderRadius: '16px',
+                }}
+              />
+              <Bar isAnimationActive={false} dataKey="count" fill="#0070f3" radius={[8, 8, 0, 0]} barSize={40} name="Units" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Equipment Utilization */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="mb-6">
@@ -273,8 +395,8 @@ export default function AnalyticsPage() {
               }}
             />
             <Legend />
-            <Bar dataKey="utilization" fill="#1e90ff" radius={[8, 8, 0, 0]} name="In Use %" />
-            <Bar dataKey="availability" fill="#00c853" radius={[8, 8, 0, 0]} name="Available %" />
+            <Bar isAnimationActive={false} dataKey="utilization" fill="#1e90ff" radius={[8, 8, 0, 0]} name="In Use %" />
+            <Bar isAnimationActive={false} dataKey="availability" fill="#00c853" radius={[8, 8, 0, 0]} name="Available %" />
           </BarChart>
         </ResponsiveContainer>
       </div>

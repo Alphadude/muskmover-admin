@@ -161,7 +161,10 @@ export default function OrderDetailsPage() {
             Download PDF
           </Button>
           <div className="flex h-10 items-center bg-[#EA580C] rounded-xl overflow-hidden shadow-sm shadow-[#EA580C]/20 hover:shadow-md hover:shadow-[#EA580C]/30 transition-all">
-            <Button className="h-full px-5 bg-transparent hover:bg-white/10 text-white border-0 text-xs font-bold uppercase tracking-wider rounded-none">
+            <Button 
+              onClick={() => router.push(`/dashboard/orders/${id}/manage`)}
+              className="h-full px-5 bg-transparent hover:bg-white/10 text-white border-0 text-xs font-bold uppercase tracking-wider rounded-none"
+            >
               Manage Status
             </Button>
             <Separator orientation="vertical" className="h-4 bg-white/20" />
