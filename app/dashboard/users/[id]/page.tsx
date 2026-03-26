@@ -5,6 +5,23 @@ import { userService } from '@/lib/services/user'
 import { AdminUser, UserRole, UserStatus } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { 
   User, 
   Mail, 
@@ -23,6 +40,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const [user, setUser] = useState<AdminUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -38,6 +59,28 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     }
     fetchUser()
   }, [id])
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingUser) return
+
+    try {
+      setIsUpdating(true)
+      await userService.update(editingUser.id, {
+        name: editingUser.name,
+        role: editingUser.role,
+        status: editingUser.status,
+      })
+      
+      setUser({ ...editingUser })
+      setIsEditDialogOpen(false)
+      toast.success('User updated successfully')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update user')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -121,11 +164,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
            </div>
            
            <div className="flex md:flex-col gap-3">
-              <Button onClick={() => router.push(`/dashboard/users?edit=${user.id}`)} className="bg-[#050B20] hover:bg-[#050B20]/90 text-white font-bold h-12 px-8 rounded-2xl shadow-lg shadow-slate-200">
+              <Button 
+                onClick={() => {
+                  setEditingUser({ ...user })
+                  setIsEditDialogOpen(true)
+                }} 
+                className="bg-[#050B20] hover:bg-[#050B20]/90 text-white font-bold h-12 px-8 rounded-2xl shadow-lg shadow-slate-200"
+              >
                 Edit Details
-              </Button>
-              <Button variant="outline" className="font-bold h-12 border-slate-200 rounded-2xl px-6">
-                Activity Logs
               </Button>
            </div>
         </div>
@@ -165,7 +211,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {/* Detailed Stats / Cards */}
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="md:col-span-2 grid grid-cols-1 gap-6">
            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm flex flex-col justify-between">
              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 mb-6">
                 <Shield className="w-6 h-6" />
@@ -174,17 +220,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Security Score</p>
                <h4 className="text-3xl font-black text-slate-900">92%</h4>
                <p className="text-xs text-slate-500 mt-2 font-medium">Excellent protection level · 2FA Active</p>
-             </div>
-           </div>
-           
-           <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm flex flex-col justify-between">
-             <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-500 mb-6">
-                <Activity className="w-6 h-6" />
-             </div>
-             <div>
-               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Actions Count</p>
-               <h4 className="text-3xl font-black text-slate-900">4,120</h4>
-               <p className="text-xs text-slate-500 mt-2 font-medium">Total operational actions performed</p>
              </div>
            </div>
         </div>
@@ -212,6 +247,88 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
            </div>
         </div>
       </div>
+
+      {/* Edit User Modal */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update the user's information and permissions.
+            </DialogDescription>
+          </DialogHeader>
+          {editingUser && (
+            <form onSubmit={handleUpdateUser} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  value={editingUser.email}
+                  disabled
+                  className="bg-slate-50"
+                />
+                <p className="text-[10px] text-muted-foreground">Email cannot be changed.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Role</Label>
+                  <Select
+                    value={editingUser.role}
+                    onValueChange={(value: UserRole) => setEditingUser({ ...editingUser, role: value })}
+                  >
+                    <SelectTrigger id="edit-role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select
+                    value={editingUser.status}
+                    onValueChange={(value: UserStatus) => setEditingUser({ ...editingUser, status: value })}
+                  >
+                    <SelectTrigger id="edit-status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter className="pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
