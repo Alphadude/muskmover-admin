@@ -133,7 +133,7 @@ export default function EquipmentDetailPage() {
               Edit Specification
             </Link>
           </Button>
-          <Button size="lg" className="rounded-2xl bg-[#050B20] hover:bg-[#050B20]/90 font-black h-14 px-8 shadow-xl shadow-slate-200 transition-all active:scale-95">
+          <Button onClick={() => router.push(`/dashboard/orders/new?${item.category === 'vessels' ? 'vesselId' : 'equipmentId'}=${item.id}`)} size="lg" className="rounded-2xl bg-[#050B20] hover:bg-[#050B20]/90 font-black h-14 px-8 shadow-xl shadow-slate-200 transition-all active:scale-95">
              Generate Quote
           </Button>
         </div>
@@ -278,7 +278,7 @@ export default function EquipmentDetailPage() {
               </div>
 
               <div className="pt-4">
-                <Button className="w-full py-7 rounded-2xl bg-white text-[#050B20] hover:bg-slate-100 font-black border-0 transition-all active:scale-95 shadow-xl shadow-white/5 text-base tracking-tight">
+                <Button onClick={() => router.push(`/dashboard/orders/new?${item.category === 'vessels' ? 'vesselId' : 'equipmentId'}=${item.id}`)} className="w-full py-7 rounded-2xl bg-white text-[#050B20] hover:bg-slate-100 font-black border-0 transition-all active:scale-95 shadow-xl shadow-white/5 text-base tracking-tight">
                   Reserve This Asset
                 </Button>
                 <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-tighter mt-4 opacity-60 italic">

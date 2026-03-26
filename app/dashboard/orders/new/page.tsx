@@ -52,6 +52,19 @@ export default function NewOrderPage() {
   })
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      const eqId = searchParams.get('equipmentId')
+      const vId = searchParams.get('vesselId')
+      if (eqId) {
+        setFormData(prev => ({ ...prev, equipmentId: Number(eqId), vesselId: 0 }))
+      } else if (vId) {
+        setFormData(prev => ({ ...prev, vesselId: Number(vId), equipmentId: 0 }))
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     const fetchAssets = async () => {
       try {
         setIsLoadingItems(true)
@@ -212,7 +225,7 @@ export default function NewOrderPage() {
               </h2>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Machinery or Vessel</label>
-                <Select onValueChange={handleAssetSelect} required>
+                <Select value={formData.equipmentId ? `equipment:${formData.equipmentId}` : (formData.vesselId ? `vessel:${formData.vesselId}` : undefined)} onValueChange={handleAssetSelect} required>
                   <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900 text-slate-700">
                     <SelectValue placeholder={isLoadingItems ? "Synchronizing Assets..." : "Choose an Asset"} />
                   </SelectTrigger>
