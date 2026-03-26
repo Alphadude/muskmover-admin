@@ -28,6 +28,7 @@ import {
   Filter,
 } from 'lucide-react'
 import { companyService } from '@/lib/services/company'
+import { orderService } from '@/lib/services/order'
 import { MarineCompany } from '@/lib/types'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
@@ -57,27 +58,45 @@ export default function CompaniesPage() {
     const fetchCompanies = async () => {
       try {
         setIsLoading(true)
-        const response = await companyService.getAll()
+        const [response, ordersResponse] = await Promise.all([
+          companyService.getAll(),
+          orderService.getAll().catch(() => ({ data: [] }))
+        ])
         
+        const rawOrdersData = Array.isArray(ordersResponse) 
+          ? ordersResponse 
+          : (ordersResponse as any)?.data || []
+          
+        const orderCountByCompany = rawOrdersData.reduce((acc: any, order: any) => {
+          const companyId = String(order.equipment?.companyId || order.vessel?.companyId);
+          if (companyId && companyId !== 'undefined') {
+            acc[companyId] = (acc[companyId] || 0) + 1;
+          }
+          return acc;
+        }, {});
+
         const rawData = Array.isArray(response) 
           ? response 
           : (response as any)?.companies || (response as any)?.data?.companies || (response as any)?.data || []
         
         const companiesArray = (Array.isArray(rawData) ? rawData : [])
-          .map((c: any) => ({
-            ...c,
-            id: String(c.id),
-            contactEmail: c.contactEmail || c.email || '',
-            joinedDate: c.joinedDate || c.createdAt || new Date(),
-            totalEquipment: c.totalEquipment ?? (Array.isArray(c.equipments) ? c.equipments.length + (Array.isArray(c.vessels) ? c.vessels.length : 0) : 0),
-            verificationStatus: c.verificationStatus || 'pending',
-            rating: c.rating ?? 0,
-            totalOrders: c.totalOrders ?? 0,
-            totalRevenue: c.totalRevenue ?? 0,
-          }))
+          .map((c: any) => {
+            const companyIdStr = String(c.id);
+            return {
+              ...c,
+              id: companyIdStr,
+              contactEmail: c.contactEmail || c.email || '',
+              joinedDate: c.joinedDate || c.createdAt || new Date(),
+              totalEquipment: c.totalEquipment ?? (Array.isArray(c.equipments) ? c.equipments.length + (Array.isArray(c.vessels) ? c.vessels.length : 0) : 0),
+              verificationStatus: c.verificationStatus || 'pending',
+              rating: c.rating ?? 0,
+              totalOrders: orderCountByCompany[companyIdStr] || c.totalOrders || 0,
+              totalRevenue: c.totalRevenue ?? 0,
+            }
+          })
         setCompanies(companiesArray)
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch companies')
+        setError(err.message || 'Failed to fetch data')
       } finally {
         setIsLoading(false)
       }

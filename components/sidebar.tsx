@@ -54,11 +54,6 @@ const navItems: NavItem[] = [
     icon: <Users className="w-5 h-5" />,
     label: 'Admin Users',
   },
-  {
-    href: '/dashboard/settings',
-    icon: <Settings className="w-5 h-5" />,
-    label: 'Settings',
-  },
 ]
 
 export function Sidebar() {
