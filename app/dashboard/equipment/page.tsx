@@ -92,11 +92,11 @@ export default function EquipmentPage() {
       .filter((item) => {
         const name = item.name || ''
         const category = item.category || ''
-        const availability = item.availability || ''
+        const status = (item.status || item.availability || 'available').toLowerCase()
         const matchesSearch = 
           name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          availability.toLowerCase().includes(searchTerm.toLowerCase())
+          status.includes(searchTerm.toLowerCase())
         return matchesSearch
       })
     
@@ -169,18 +169,19 @@ export default function EquipmentPage() {
       ),
     },
     {
-      key: 'availability' as const,
+      key: 'status' as const,
       label: 'Availability',
       sortable: true,
       width: '15%',
-      render: (value: string) => {
+      render: (value: string, item: Equipment) => {
+        const statusValue = (value || item.availability || 'available').toLowerCase()
         const variants: Record<string, 'default' | 'secondary'> = {
           available: 'default',
           rented: 'secondary',
           maintenance: 'secondary',
           unavailable: 'secondary',
         }
-        return <Badge variant={variants[value] || 'secondary'}>{value}</Badge>
+        return <Badge variant={variants[statusValue] || 'secondary'} className="capitalize">{statusValue}</Badge>
       },
     },
     {
@@ -249,9 +250,9 @@ export default function EquipmentPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Items', value: equipment.length, color: 'bg-slate-900' },
-          { label: 'Available', value: equipment.filter(e => e.availability === 'available').length, color: 'bg-emerald-500' },
-          { label: 'Rented', value: equipment.filter(e => e.availability === 'rented').length, color: 'bg-blue-500' },
-          { label: 'Maintenance', value: equipment.filter(e => e.availability === 'maintenance').length, color: 'bg-amber-500' },
+          { label: 'Available', value: equipment.filter(e => (e.status || e.availability || '').toLowerCase() === 'available').length, color: 'bg-emerald-500' },
+          { label: 'Rented', value: equipment.filter(e => (e.status || e.availability || '').toLowerCase() === 'rented').length, color: 'bg-blue-500' },
+          { label: 'Maintenance', value: equipment.filter(e => (e.status || e.availability || '').toLowerCase() === 'maintenance').length, color: 'bg-amber-500' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-5 flex items-start gap-3">
             <div className={`w-1 h-8 rounded-full mt-0.5 ${stat.color}`} />
@@ -333,7 +334,7 @@ export default function EquipmentPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm font-medium text-amber-800">
-            <span className="font-bold">{equipment.filter((e) => e.availability === 'maintenance').length} assets</span> are currently under maintenance.
+            <span className="font-bold">{equipment.filter((e) => (e.status || e.availability || '').toLowerCase() === 'maintenance').length} assets</span> are currently under maintenance.
           </p>
         </div>
       )}

@@ -120,7 +120,7 @@ export default function Dashboard() {
 
         // 3. Calculate Equipment Statuses
         const statusMap = allEquipment.reduce((acc: any, e) => {
-          const status = e.availability || 'available'
+          const status = (e.status || e.availability || 'available').toLowerCase()
           acc[status] = (acc[status] || 0) + 1
           return acc
         }, {})
