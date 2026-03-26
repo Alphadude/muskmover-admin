@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,9 +30,9 @@ import { orderService } from '@/lib/services/order'
 import { equipmentService } from '@/lib/services/equipment'
 import { companyService } from '@/lib/services/company'
 import { Order, Equipment, MarineCompany } from '@/lib/types'
-import { useEffect } from 'react'
 
 export default function OrdersPage() {
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
   const [companies, setCompanies] = useState<MarineCompany[]>([])
