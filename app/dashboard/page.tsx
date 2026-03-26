@@ -59,6 +59,7 @@ const categoryData = [
 const EMPTY_STATS: DashboardData = {
   totalCompanies: 0,
   totalEquipment: 0,
+  totalOrders: 0,
   activeOrders: 0,
   monthlyRevenue: 0,
   pendingVerifications: 0,
@@ -95,7 +96,7 @@ export default function Dashboard() {
         // Safely extract arrays (handle potential .data wrapper from backend)
         const companies = Array.isArray(companiesRes) ? companiesRes : (companiesRes as any)?.data || []
         const allEquipment = Array.isArray(allEquipmentRes) ? allEquipmentRes : (allEquipmentRes as any)?.data || []
-        const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.data || []
+        const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.data || (ordersRes as any)?.orders || []
         const notifications = Array.isArray(notificationsRes) ? notificationsRes : (notificationsRes as any)?.data || []
 
         const now = new Date()
@@ -105,6 +106,7 @@ export default function Dashboard() {
         // 1. Calculate Core KPIs
         const totalCompanies = companies.length
         const totalEquipment = allEquipment.length
+        const totalOrders = orders.length
         const activeOrders = orders.filter(o => o.status === 'active' || o.status === 'confirmed').length
         const pendingVerifications = companies.filter(c => c.verificationStatus !== 'verified').length
         
@@ -170,6 +172,7 @@ export default function Dashboard() {
         const processedStats: DashboardData = {
           totalCompanies,
           totalEquipment,
+          totalOrders,
           activeOrders,
           monthlyRevenue,
           pendingVerifications,
@@ -216,7 +219,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatsCard
           title="Total Companies"
           value={stats.totalCompanies}
@@ -234,11 +237,19 @@ export default function Dashboard() {
           trend={{ value: 8, direction: 'up' }}
         />
         <StatsCard
+          title="Total Orders"
+          value={stats.totalOrders}
+          icon={<ShoppingCart className="w-8 h-8" />}
+          description="Lease agreements"
+          variant="secondary"
+          trend={{ value: 15, direction: 'up' }}
+        />
+        <StatsCard
           title="Active Orders"
           value={stats.activeOrders}
           icon={<ShoppingCart className="w-8 h-8" />}
           description="In progress"
-          variant="secondary"
+          variant="accent"
           trend={{ value: 24, direction: 'up' }}
         />
         <StatsCard

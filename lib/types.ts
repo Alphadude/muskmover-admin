@@ -85,6 +85,7 @@ export interface Message {
 export interface Dashboard {
   totalCompanies: number
   totalEquipment: number
+  totalOrders: number
   activeOrders: number
   monthlyRevenue: number
   pendingVerifications: number
