@@ -177,7 +177,9 @@ export default function EditEquipmentPage() {
     setIsSubmitting(true)
 
     try {
-      const finalImages = mediaItems.map(m => m.url).filter(Boolean)
+      const finalImages = mediaItems
+        .map(m => m.url)
+        .filter(url => url && !url.startsWith('blob:'))
       
       const payload = {
         ...formData,
