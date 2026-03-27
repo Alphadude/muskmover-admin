@@ -31,12 +31,19 @@ import { SuccessModal } from '@/components/ui/success-modal'
 
 type Tab = 'equipment' | 'vessel'
 
+interface MediaItem {
+  id: string;
+  url: string;
+  isUploading: boolean;
+  localPreview: string;
+}
+
 export default function AddEquipmentPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [images, setImages] = useState<{ url: string; isUploading: boolean; localPreview: string }[]>([])
+  const [images, setImages] = useState<MediaItem[]>([])
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [companies, setCompanies] = useState<MarineCompany[]>([])
 
@@ -71,11 +78,10 @@ export default function AddEquipmentPage() {
       type
     })
 
-    // Handle different possible response structures
     const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
     if (!url) {
-      const errorMsg = (response as any).message || (response as any).error || 'No URL returned from server'
-      throw new Error(`Platform Error: ${errorMsg}`)
+      const errorMsg = (response as any).message || (response as any).error || 'No URL returned'
+      throw new Error(errorMsg)
     }
     return url
   }
@@ -90,8 +96,8 @@ export default function AddEquipmentPage() {
       return
     }
 
-    // Add local previews immediately
-    const newItems = newFiles.map(file => ({
+    const newItems: MediaItem[] = newFiles.map(file => ({
+      id: Math.random().toString(36).substring(7) + Date.now(),
       url: '',
       isUploading: true,
       localPreview: URL.createObjectURL(file)
@@ -99,31 +105,34 @@ export default function AddEquipmentPage() {
     
     setImages(prev => [...prev, ...newItems])
 
-    // Upload each file individually
-    newFiles.forEach(async (file, index) => {
-      const globalIndex = images.length + index
+    // Parallel uploads
+    newItems.forEach(async (item, index) => {
+      const file = newFiles[index]
       try {
         const url = await uploadToBackend(file, activeTab === 'vessel' ? 'vessel' : 'equipment')
-        setImages(prev => {
-          const updated = [...prev]
-          if (updated[globalIndex]) {
-            updated[globalIndex] = { ...updated[globalIndex], url, isUploading: false }
-          }
-          return updated
-        })
+        setImages(prev => prev.map(img => 
+          img.id === item.id ? { ...img, url, isUploading: false } : img
+        ))
       } catch (err: any) {
-        toast.error(`Failed to upload ${file.name}: ${err.message}`)
-        setImages(prev => prev.filter((_, i) => i !== globalIndex))
+        toast.error(`Upload error: ${err.message}`)
+        setImages(prev => prev.filter(img => img.id !== item.id))
       }
     })
+    
+    e.target.value = ''
   }
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
+  const removeImage = (id: string) => {
+    setImages((prev) => prev.filter(img => img.id !== id))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (images.some(img => img.isUploading)) {
+      toast.error('Wait for all images to upload.')
+      return
+    }
+
     setIsSubmitting(true)
     
     try {
@@ -131,7 +140,7 @@ export default function AddEquipmentPage() {
       const data = Object.fromEntries(formData.entries())
       
       await equipmentService.create({
-        id: 0, // Schema shows id: 0
+        id: 0,
         name: data.name as string,
         category: (activeTab === 'vessel' ? 'vessels' : data.category) as string,
         companyId: Number(data.companyId) || 0,
@@ -233,7 +242,7 @@ export default function AddEquipmentPage() {
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     {(companies || []).map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <SelectItem key={c.id} value={String(c.id)}>
                         {c.name}
                       </SelectItem>
                     ))}
@@ -396,11 +405,11 @@ export default function AddEquipmentPage() {
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {images.map((img, index) => (
-                <div key={index} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-[1.02]">
+              {images.map((img) => (
+                <div key={img.id} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-[1.02]">
                   <img 
                     src={img.localPreview || img.url} 
-                    alt={`Preview ${index}`} 
+                    alt="Preview" 
                     className={`w-full h-full object-cover transition-opacity duration-300 ${img.isUploading ? 'opacity-40 grayscale' : 'opacity-100'}`} 
                   />
                   {img.isUploading && (
@@ -413,7 +422,7 @@ export default function AddEquipmentPage() {
                   )}
                   <button
                     type="button"
-                    onClick={() => removeImage(index)}
+                    onClick={() => removeImage(img.id)}
                     className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-destructive shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   >
                     <X className="w-4 h-4" />
@@ -436,16 +445,6 @@ export default function AddEquipmentPage() {
                 </label>
               )}
             </div>
-            
-            {images.length === 0 && (
-              <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30">
-                <div className="p-4 rounded-2xl bg-white shadow-sm border border-slate-100 text-slate-300 mb-4">
-                  <ImageIcon className="w-8 h-8" />
-                </div>
-                <p className="text-sm font-bold text-slate-400">No images uploaded yet</p>
-                <p className="text-xs text-slate-400 mt-1 uppercase tracking-tight font-medium">Add at least one photo of the {activeTab}</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -453,13 +452,18 @@ export default function AddEquipmentPage() {
         <div className="flex items-center gap-4">
           <Button
             type="submit"
-            disabled={isSubmitting}
-            className="h-14 px-10 rounded-2xl bg-[#050B20] hover:bg-[#050B20]/90 text-white font-bold text-base transition-all shadow-xl shadow-slate-200 hover:shadow-primary/20 hover:scale-[1.02]"
+            disabled={isSubmitting || images.some(img => img.isUploading)}
+            className="h-14 px-10 rounded-2xl bg-[#050B20] hover:bg-[#050B20]/90 text-white font-bold text-base transition-all shadow-xl shadow-slate-200 hover:shadow-primary/20 hover:scale-[1.02] disabled:opacity-50"
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Creating...
+              </span>
+            ) : images.some(img => img.isUploading) ? (
+              <span className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Uploading...
               </span>
             ) : (
               <span className="flex items-center gap-3">
@@ -494,7 +498,6 @@ export default function AddEquipmentPage() {
         secondaryActionLabel={`Add Another ${activeTab === 'vessel' ? 'Vessel' : 'Asset'}`}
         onSecondaryAction={() => {
           setShowSuccess(false)
-          // Reset form or stay on page
           window.location.reload()
         }}
       />

@@ -25,6 +25,7 @@ const selectCls =
   'w-full h-12 rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-slate-900 font-bold shadow-sm'
 
 interface MediaItem {
+  id: string;
   url: string;
   isUploading: boolean;
   localPreview: string;
@@ -74,6 +75,7 @@ export default function EditEquipmentPage() {
         : (Array.isArray(asset.images) ? asset.images : []);
 
       setMediaItems(imagesArr.map((url: string) => ({
+        id: Math.random().toString(36).substring(7) + Date.now(),
         url,
         isUploading: false,
         localPreview: url
@@ -124,9 +126,8 @@ export default function EditEquipmentPage() {
       return
     }
 
-    // Add local previews immediately
-    const startIdx = mediaItems.length
-    const newItems = newFiles.map(file => ({
+    const newItems: MediaItem[] = newFiles.map(file => ({
+      id: Math.random().toString(36).substring(7) + Date.now(),
       url: '',
       isUploading: true,
       localPreview: URL.createObjectURL(file)
@@ -134,9 +135,9 @@ export default function EditEquipmentPage() {
     
     setMediaItems(prev => [...prev, ...newItems])
 
-    // Upload each file individually
-    newFiles.forEach(async (file, index) => {
-      const globalIndex = startIdx + index
+    // Parallel uploads
+    newItems.forEach(async (item, index) => {
+      const file = newFiles[index]
       try {
         const base64 = await fileToBase64(file)
         const base64Data = base64.split(',')[1]
@@ -149,29 +150,30 @@ export default function EditEquipmentPage() {
         const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
         
         if (url) {
-          setMediaItems(prev => {
-            const updated = [...prev]
-            if (updated[globalIndex]) {
-              updated[globalIndex] = { ...updated[globalIndex], url, isUploading: false }
-            }
-            return updated
-          })
+          setMediaItems(prev => prev.map(m => 
+            m.id === item.id ? { ...m, url, isUploading: false } : m
+          ))
         }
       } catch (err: any) {
-        toast.error(`Failed to upload ${file.name}: ${err.message}`)
-        setMediaItems(prev => prev.filter((_, i) => i !== globalIndex))
+        toast.error(`Upload error: ${err.message}`)
+        setMediaItems(prev => prev.filter(m => m.id !== item.id))
       }
     })
     
     e.target.value = ''
   }
 
-  const removeImage = (index: number) => {
-    setMediaItems(prev => prev.filter((_, i) => i !== index))
+  const removeImage = (id: string) => {
+    setMediaItems(prev => prev.filter(m => m.id !== id))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (mediaItems.some(m => m.isUploading)) {
+      toast.error('Wait for visuals to finish uploading.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -377,11 +379,11 @@ export default function EditEquipmentPage() {
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6">
-              {mediaItems.map((img, index) => (
-                <div key={index} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-105">
+              {mediaItems.map((img) => (
+                <div key={img.id} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-105">
                   <img 
                     src={img.localPreview || img.url} 
-                    alt={`Preview ${index}`} 
+                    alt="Preview" 
                     className={`w-full h-full object-cover transition-opacity duration-300 ${img.isUploading ? 'opacity-40 grayscale' : 'opacity-100'}`} 
                   />
                   {img.isUploading && (
@@ -395,7 +397,7 @@ export default function EditEquipmentPage() {
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => removeImage(img.id)}
                       className="p-2.5 rounded-xl bg-white text-destructive shadow-xl hover:scale-110 transition-transform active:scale-90"
                     >
                       <X className="w-4 h-4" />
