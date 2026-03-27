@@ -27,8 +27,21 @@ export default function NotificationsPage() {
     try {
       setIsLoading(true)
       const data = await notificationService.getAll()
-      const notificationsArray = Array.isArray(data) ? data : (data as any)?.notifications || (data as any)?.data || []
-      setNotifications(notificationsArray)
+      const rawNotifications = Array.isArray(data) ? data : (data as any)?.notifications || (data as any)?.data || []
+      const formattedNotifications = rawNotifications.map((n: any) => ({
+        ...n,
+        id: String(n.id),
+        subject: n.title || n.subject || 'System Notification',
+        body: n.message || n.body || '',
+        isRead: Boolean(n.isRead),
+        createdAt: n.createdAt ? new Date(n.createdAt) : new Date(),
+        type: n.type || 'info'
+      }))
+      
+      // Sort to show newest first
+      formattedNotifications.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime())
+      
+      setNotifications(formattedNotifications)
     } catch (err: any) {
       setError(err.message || 'Failed to load notifications')
     } finally {
