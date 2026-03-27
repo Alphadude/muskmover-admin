@@ -78,14 +78,16 @@ export interface AdminUser {
 
 export interface Message {
   id: string
-  senderId: string
-  senderName: string
-  recipientId: string
-  companyId: string
+  senderId?: string
+  senderName?: string
+  recipientId?: string
+  companyId?: string
   subject: string
   body: string
   isRead: boolean
   createdAt: Date
+  type?: string
+  relatedId?: number | string
   attachments?: string[]
 }
 

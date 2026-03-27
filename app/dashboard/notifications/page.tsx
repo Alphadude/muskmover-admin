@@ -3,6 +3,7 @@
 import { notificationService } from '@/lib/services/notification'
 import { Message } from '@/lib/types'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { 
@@ -22,6 +23,7 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const router = useRouter()
 
   const fetchNotifications = async () => {
     try {
@@ -70,6 +72,32 @@ export default function NotificationsPage() {
       toast.success('All notifications marked as read')
     } catch (err) {
       toast.error('Failed to update notifications')
+    }
+  }
+
+  const handleView = (notification: Message, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { type, relatedId } = notification
+    if (!relatedId) {
+      toast.info('No related item found for this notification')
+      return
+    }
+
+    // Mark as read first
+    if (!notification.isRead) {
+      handleMarkAsRead(notification.id)
+    }
+
+    const itemType = (type || '').toLowerCase()
+    switch (itemType) {
+      case 'order':
+        router.push(`/dashboard/orders/${relatedId}`)
+        break
+      case 'equipment':
+        router.push(`/dashboard/equipment/${relatedId}`)
+        break
+      default:
+        toast.info('Navigation not supported for this notification type')
     }
   }
 
@@ -216,7 +244,12 @@ export default function NotificationsPage() {
                        >
                          <Trash2 className="w-4 h-4" />
                        </Button>
-                       <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-primary hover:text-primary hover:bg-primary/5">
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className="h-8 text-xs font-bold text-primary hover:text-primary hover:bg-primary/5"
+                         onClick={(e) => handleView(notification, e)}
+                       >
                          View
                        </Button>
                     </div>
