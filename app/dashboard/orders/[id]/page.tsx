@@ -53,7 +53,13 @@ export default function OrderDetailsPage() {
         if (resolvedOrder.equipmentId) {
           const equipmentData = await equipmentService.getById(String(resolvedOrder.equipmentId))
           const resolvedAsset = (equipmentData as any).data || equipmentData
-          setAsset(resolvedAsset)
+          
+          // Fix: Handle images splitting if it's a string
+          const imagesArr = typeof resolvedAsset.images === 'string' 
+            ? (resolvedAsset.images as string).split(',').filter(Boolean) 
+            : (Array.isArray(resolvedAsset.images) ? resolvedAsset.images : []);
+            
+          setAsset({ ...resolvedAsset, images: imagesArr })
 
           // Fetch company if companyId exists
           if (resolvedAsset.companyId) {
@@ -65,7 +71,13 @@ export default function OrderDetailsPage() {
           try {
              const vesselData = await equipmentService.getById(String(resolvedOrder.vesselId))
              const resolvedVessel = (vesselData as any).data || vesselData
-             setAsset(resolvedVessel)
+             
+             // Fix: Handle images splitting if it's a string
+             const imagesArr = typeof resolvedVessel.images === 'string' 
+               ? (resolvedVessel.images as string).split(',').filter(Boolean) 
+               : (Array.isArray(resolvedVessel.images) ? resolvedVessel.images : []);
+               
+             setAsset({ ...resolvedVessel, images: imagesArr })
              if (resolvedVessel.companyId) {
                 const companyData = await companyService.getById(String(resolvedVessel.companyId))
                 setCompany((companyData as any).data || companyData)
@@ -99,6 +111,16 @@ export default function OrderDetailsPage() {
       default:
         return { icon: <Clock className="w-4 h-4" />, className: 'bg-slate-50 text-slate-600 border-slate-100', label: status }
     }
+  }
+
+  const getAssetImage = (images: any) => {
+    if (!images) return null
+    if (Array.isArray(images)) return images[0] || null
+    if (typeof images === 'string') {
+      const split = images.split(',').filter(Boolean)
+      return split[0] || null
+    }
+    return null
   }
 
   if (isLoading) {
@@ -255,9 +277,9 @@ export default function OrderDetailsPage() {
               {asset ? (
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                   <div className="relative w-full md:w-48 h-32 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shrink-0 group-hover:border-blue-500/20 transition-colors">
-                    {asset.images?.[0] ? (
+                    {getAssetImage(asset.images) ? (
                       <Image 
-                        src={asset.images[0]} 
+                        src={getAssetImage(asset.images)!} 
                         alt={asset.name} 
                         fill 
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
