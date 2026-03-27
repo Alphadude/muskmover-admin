@@ -42,7 +42,7 @@ export interface Equipment {
   hourlyRate: number
   dailyRate: number
   monthlyRate: number
-  images: string[]
+  images: string
   createdAt?: string
   updatedAt?: string
 }

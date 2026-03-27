@@ -186,7 +186,7 @@ export default function EditEquipmentPage() {
         hourlyRate: Number(formData.hourlyRate),
         dailyRate: Number(formData.dailyRate),
         monthlyRate: Number(formData.monthlyRate),
-        images: finalImages
+        images: finalImages.join(',')
       }
 
       delete (payload as any)._type;

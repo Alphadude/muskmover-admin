@@ -138,7 +138,7 @@ export default function AddEquipmentPage() {
         details: data.details as string,
         status: (data.status as string) || 'Available',
         condition: data.condition as string || 'Excellent',
-        images: images.map(img => img.url).filter(Boolean), 
+        images: images.map(img => img.url).filter(Boolean).join(','), 
         weight: Number(data.weight) || 0,
         yearManufactured: Number(data.yearManufactured) || Number(data.yearBuilt) || 0,
         hourlyRate: Number(data.hourlyRate) || 0,
