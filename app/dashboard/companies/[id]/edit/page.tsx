@@ -65,7 +65,7 @@ export default function EditCompanyPage() {
     location: '',
     postalCode: '',
     description: '',
-    verificationStatus: 'pending' as 'verified' | 'pending' | 'unverified',
+    status: 'Pending',
   })
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function EditCompanyPage() {
           location: rawCompany.location || '',
           postalCode: rawCompany.postalCode || '',
           description: rawCompany.description || '',
-          verificationStatus: rawCompany.verificationStatus || 'pending',
+          status: rawCompany.status || 'Pending',
         })
         setLogo(rawCompany.logo || null)
         setBanner(rawCompany.banner || null)
@@ -411,20 +411,20 @@ export default function EditCompanyPage() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Verification Status</label>
                   <Select 
-                    value={formData.verificationStatus} 
-                    onValueChange={(val: any) => setFormData({...formData, verificationStatus: val})}
+                    value={formData.status} 
+                    onValueChange={(val: any) => setFormData({...formData, status: val})}
                   >
                     <SelectTrigger className={`w-full h-12 rounded-xl border-slate-200 font-bold text-xs ring-offset-background focus:ring-1 focus:ring-slate-900 ${
-                      formData.verificationStatus === 'verified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                      formData.verificationStatus === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                      formData.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                      formData.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                       'bg-slate-50 text-slate-700 border-slate-100'
                     }`}>
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                      <SelectItem value="verified" className="text-emerald-600 font-bold focus:bg-emerald-50 focus:text-emerald-700">Verified</SelectItem>
-                      <SelectItem value="pending" className="text-amber-600 font-bold focus:bg-amber-50 focus:text-amber-700">Pending Review</SelectItem>
-                      <SelectItem value="unverified" className="text-slate-600 font-bold focus:bg-slate-50 focus:text-slate-700">Unverified</SelectItem>
+                      <SelectItem value="Approved" className="text-emerald-600 font-bold focus:bg-emerald-50 focus:text-emerald-700">Approved</SelectItem>
+                      <SelectItem value="Pending" className="text-amber-600 font-bold focus:bg-amber-50 focus:text-amber-700">Pending Review</SelectItem>
+                      <SelectItem value="Unverified" className="text-slate-600 font-bold focus:bg-slate-50 focus:text-slate-700">Unverified</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

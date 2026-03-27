@@ -19,9 +19,14 @@ export interface MarineCompany {
   logo?: string
   banner?: string
   postalCode?: string
-  verificationStatus: CompanyVerificationStatus
+  status: string
   createdAt: string
   updatedAt: string
+  rating: number
+  totalOrders: number
+  totalRevenue: number
+  description?: string
+  totalEquipment?: number
 }
 
 export interface Equipment {

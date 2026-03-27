@@ -98,12 +98,12 @@ export default function CompanyDetailPage() {
     }
   }, [companyId])
 
-  const handleStatusUpdate = async (newStatus: CompanyVerificationStatus) => {
+  const handleStatusUpdate = async (newStatus: string) => {
     if (!company) return
     const toastId = toast.loading(`Updating company status to ${newStatus}...`)
     try {
-      await companyService.update(companyId, { verificationStatus: newStatus })
-      setCompany({ ...company, verificationStatus: newStatus })
+      await companyService.update(companyId, { status: newStatus })
+      setCompany({ ...company, status: newStatus })
       toast.success(`Company status updated to ${newStatus}`, { id: toastId })
       // Refresh to ensure any server components or global state are in sync
       router.refresh()
@@ -156,25 +156,25 @@ export default function CompanyDetailPage() {
   }
 
   const statusConfig = {
-    verified: {
+    Approved: {
       icon: <Check className="w-5 h-5 text-emerald-500" />,
-      label: 'Verified',
+      label: 'Approved',
       className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
     },
-    pending: {
+    Pending: {
       icon: <Clock className="w-5 h-5 text-amber-500" />,
       label: 'Pending',
       className: 'bg-amber-50 text-amber-700 border-amber-100',
     },
-    unverified: {
+    Unverified: {
       icon: <Clock className="w-5 h-5 text-slate-500" />,
       label: 'Unverified',
       className: 'bg-slate-50 text-slate-700 border-slate-100',
     },
   }
 
-  const status =
-    statusConfig[company.verificationStatus as keyof typeof statusConfig] || statusConfig.unverified
+  const currentStatus = (company.status || 'Unverified') as keyof typeof statusConfig
+  const status = statusConfig[currentStatus] || statusConfig.Unverified
 
   const equipmentColumns = [
     {
@@ -194,7 +194,7 @@ export default function CompanyDetailPage() {
       render: (value: number) => `₦${value.toLocaleString()}`,
     },
     {
-      key: 'availability' as const,
+      key: 'status' as const,
       label: 'Status',
       width: '20%',
       render: (value: string) => (
@@ -222,7 +222,7 @@ export default function CompanyDetailPage() {
       width: '20%',
     },
     {
-      key: 'rentedBy' as const,
+      key: 'renterName' as const,
       label: 'Rented By',
       width: '25%',
     },
@@ -445,20 +445,20 @@ export default function CompanyDetailPage() {
               </Button>
               <Button 
                 onClick={() => { setActionType('approve'); setIsModalOpen(true); }}
-                disabled={company.verificationStatus === 'verified'}
+                disabled={company.status === 'Approved'}
                 className="flex-1 h-12 rounded-xl bg-[#EA580C] hover:bg-[#D44D0A] font-bold shadow-[#EA580C]/20 shadow-lg border-0 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
               >
-                {company.verificationStatus === 'verified' ? 'Already Verified' : 'Approve Business'}
+                {company.status === 'Approved' ? 'Already Approved' : 'Approve Business'}
               </Button>
             </div>
             <div className="flex gap-3 mt-3">
               <Button 
                 onClick={() => { setActionType('suspend'); setIsModalOpen(true); }}
-                disabled={company.verificationStatus === 'unverified'}
+                disabled={company.status === 'Unverified'}
                 variant="outline" 
                 className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold transition-all disabled:opacity-50 disabled:bg-slate-50"
               >
-                {company.verificationStatus === 'unverified' ? 'Account Suspended' : 'Suspend Account'}
+                {company.status === 'Unverified' ? 'Account Suspended' : 'Suspend Account'}
               </Button>
               <Button 
                 onClick={() => { setActionType('delete'); setIsModalOpen(true); }}
@@ -509,9 +509,9 @@ export default function CompanyDetailPage() {
                     }`}
                     onClick={() => {
                       if (actionType === 'approve') {
-                        handleStatusUpdate('verified')
+                        handleStatusUpdate('Approved')
                       } else if (actionType === 'suspend') {
-                        handleStatusUpdate('unverified')
+                        handleStatusUpdate('Unverified')
                       } else if (actionType === 'delete') {
                         handleStatusDelete()
                       }

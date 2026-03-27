@@ -41,7 +41,7 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void
 }
 
-export function DataTable<T extends { id: string }>({
+export function DataTable<T extends { id: string | number }>({
   data,
   columns,
   onRowClick,
@@ -54,7 +54,7 @@ export function DataTable<T extends { id: string }>({
   itemsPerPage = 10,
   onPageChange,
 }: DataTableProps<T>) {
-  const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
+  const [selectedRows, setSelectedRows] = React.useState<Set<string | number>>(new Set())
 
   const toggleAll = () => {
     if (selectedRows.size === data.length) {
@@ -64,7 +64,7 @@ export function DataTable<T extends { id: string }>({
     }
   }
 
-  const toggleRow = (id: string) => {
+  const toggleRow = (id: string | number) => {
     const newSelected = new Set(selectedRows)
     if (newSelected.has(id)) {
       newSelected.delete(id)
