@@ -175,27 +175,44 @@ export default function ManageOrderStatusPage() {
         {/* Agreement Summary Card (Snapshot) */}
         <Card className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden bg-slate-50/30">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#EA580C]">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-6">
+              <div className="flex items-center gap-4 col-span-2 md:col-span-1 border-r border-slate-200 pr-4">
+                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#EA580C] shrink-0">
                   <ShieldCheck size={24} />
                 </div>
                 <div>
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Target Agreement</p>
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Target</p>
                    <p className="text-lg font-bold text-slate-900">{order.orderNumber}</p>
                 </div>
               </div>
               
-              <Separator orientation="vertical" className="hidden md:block h-10 bg-slate-200" />
-              
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Renter</p>
-                <p className="text-sm font-bold text-slate-700">{order.renterName}</p>
+              <div className="space-y-1 flex flex-col justify-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Company / Entity</p>
+                <p className="text-sm font-bold text-slate-700 truncate">{order.company || order.renterName}</p>
+                <p className="text-xs font-semibold text-slate-400 truncate tracking-tight">{order.renterEmail}</p>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 flex flex-col justify-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact Person</p>
+                <p className="text-sm font-bold text-slate-700 truncate">{order.contactPerson || order.renterName}</p>
+                <p className="text-xs font-semibold text-slate-400 truncate tracking-tight">{order.phone || 'No phone provided'}</p>
+              </div>
+
+              <div className="space-y-1 flex flex-col justify-center">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Value</p>
-                <p className="text-sm font-black text-[#EA580C]">₦{(order.totalPrice || 0).toLocaleString()}</p>
+                <p className="text-lg font-black text-[#EA580C]">₦{(order.totalPrice || 0).toLocaleString()}</p>
+              </div>
+              
+              <div className="space-y-1 flex flex-col justify-center col-span-2 md:col-span-2 border-t border-slate-100 pt-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Logistics & Location</p>
+                <p className="text-sm font-bold text-slate-700">{order.projectLocation || 'N/A'}</p>
+                <p className="text-xs font-semibold text-slate-400">{order.industrySector || 'N/A'}</p>
+              </div>
+              
+              <div className="space-y-1 flex flex-col justify-center col-span-2 md:col-span-2 border-t border-slate-100 pt-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Operation Scope</p>
+                <p className="text-sm font-bold text-slate-700">Duration: {order.totalDuration || '1 Day'}</p>
+                <p className="text-xs font-semibold text-emerald-600">{order.crewRequested ? 'Includes Operational Crew' : 'Equipment Only (No Crew)'}</p>
               </div>
             </div>
           </CardContent>
