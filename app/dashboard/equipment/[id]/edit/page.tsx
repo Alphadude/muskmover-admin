@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, Save, Upload, X, Package, CheckCircle2 } from 'lucide-react'
+import { ChevronRight, Save, Upload, X, Package, CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -24,6 +24,12 @@ const inputCls =
 const selectCls =
   'w-full h-12 rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-slate-900 font-bold shadow-sm'
 
+interface MediaItem {
+  url: string;
+  isUploading: boolean;
+  localPreview: string;
+}
+
 export default function EditEquipmentPage() {
   const router = useRouter()
   const params = useParams()
@@ -31,24 +37,23 @@ export default function EditEquipmentPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isUploading, setIsUploading] = useState(false)
   const [companies, setCompanies] = useState<MarineCompany[]>([])
   const [error, setError] = useState('')
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
   
   // Controlled form state
   const [formData, setFormData] = useState<Partial<Equipment>>({
     name: '',
     category: '',
     details: '',
-    companyId: '',
-    availability: 'available',
+    companyId: 0,
+    status: 'available',
     condition: 'excellent',
     weight: 0,
     yearManufactured: new Date().getFullYear(),
     hourlyRate: 0,
     dailyRate: 0,
     monthlyRate: 0,
-    images: []
   })
 
   const fetchData = useCallback(async () => {
@@ -59,22 +64,25 @@ export default function EditEquipmentPage() {
         companyService.getAll()
       ])
       
-      // Handle wrappers
       const asset = (equipmentResponse as any).data || equipmentResponse;
       const companiesArray = (companiesResponse as any).data || (companiesResponse as any).companies || (Array.isArray(companiesResponse) ? companiesResponse : []);
       
       setCompanies(companiesArray)
       
-      // Map API fields to form fields
       const imagesArr = typeof asset.images === 'string' 
         ? (asset.images as string).split(',').filter(Boolean) 
         : (Array.isArray(asset.images) ? asset.images : []);
 
+      setMediaItems(imagesArr.map((url: string) => ({
+        url,
+        isUploading: false,
+        localPreview: url
+      })))
+
       setFormData({
         ...asset,
-        id: String(asset.id),
-        details: asset.details || asset.description || '', // Map description to details if needed
-        images: imagesArr,
+        id: Number(asset.id),
+        details: asset.details || asset.description || '',
         weight: Number(asset.weight) || 0,
         yearManufactured: Number(asset.yearManufactured) || new Date().getFullYear(),
         hourlyRate: Number(asset.hourlyRate) || 0,
@@ -110,17 +118,26 @@ export default function EditEquipmentPage() {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    setIsUploading(true)
-    const toastId = toast.loading('Uploading visuals to Cloudinary...')
+    const newFiles = Array.from(files)
+    if (mediaItems.length + newFiles.length > 10) {
+      toast.error('Maximum 10 visuals allowed')
+      return
+    }
 
-    try {
-      const uploadedUrls = []
-      for (const file of Array.from(files)) {
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`File ${file.name} is too large (max 5MB)`)
-          continue
-        }
+    // Add local previews immediately
+    const startIdx = mediaItems.length
+    const newItems = newFiles.map(file => ({
+      url: '',
+      isUploading: true,
+      localPreview: URL.createObjectURL(file)
+    }))
+    
+    setMediaItems(prev => [...prev, ...newItems])
 
+    // Upload each file individually
+    newFiles.forEach(async (file, index) => {
+      const globalIndex = startIdx + index
+      try {
         const base64 = await fileToBase64(file)
         const base64Data = base64.split(',')[1]
         
@@ -130,31 +147,27 @@ export default function EditEquipmentPage() {
         })
 
         const url = (response as any).url || (response as any).secure_url || (response as any).data?.url
-        if (url) uploadedUrls.push(url)
+        
+        if (url) {
+          setMediaItems(prev => {
+            const updated = [...prev]
+            if (updated[globalIndex]) {
+              updated[globalIndex] = { ...updated[globalIndex], url, isUploading: false }
+            }
+            return updated
+          })
+        }
+      } catch (err: any) {
+        toast.error(`Failed to upload ${file.name}: ${err.message}`)
+        setMediaItems(prev => prev.filter((_, i) => i !== globalIndex))
       }
-
-      if (uploadedUrls.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          images: [...(prev.images || []), ...uploadedUrls]
-        }))
-        toast.success(`Successfully uploaded ${uploadedUrls.length} file(s)`, { id: toastId })
-      } else {
-        toast.error('No files were successfully uploaded.', { id: toastId })
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Media upload failed. Please try again.', { id: toastId })
-    } finally {
-      setIsUploading(false)
-      e.target.value = ''
-    }
+    })
+    
+    e.target.value = ''
   }
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: (prev.images || []).filter((_, i) => i !== index)
-    }))
+    setMediaItems(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,29 +175,27 @@ export default function EditEquipmentPage() {
     setIsSubmitting(true)
 
     try {
-      // Serialize images array back to string for backend
+      const finalImages = mediaItems.map(m => m.url).filter(Boolean)
+      
       const payload = {
         ...formData,
-        id: Number(id), // Backend expects number ID in payload usually
+        id: Number(id),
         companyId: Number(formData.companyId),
         weight: Number(formData.weight),
         yearManufactured: Number(formData.yearManufactured),
         hourlyRate: Number(formData.hourlyRate),
         dailyRate: Number(formData.dailyRate),
         monthlyRate: Number(formData.monthlyRate),
-        images: (formData.images || []).join(',')
+        images: finalImages
       }
 
-      // Remove unwanted internal fields
       delete (payload as any)._type;
       delete (payload as any).createdAt;
       delete (payload as any).updatedAt;
 
-      await equipmentService.update(id, payload)
+      await equipmentService.update(id, payload as any)
       
-      toast.success('Asset updated successfully', {
-        description: `${formData.name} has been synchronized with the marketplace.`
-      })
+      toast.success('Asset updated successfully')
       router.push(`/dashboard/equipment/${id}`)
     } catch (err: any) {
       toast.error(err.message || 'Failed to update asset')
@@ -208,14 +219,13 @@ export default function EditEquipmentPage() {
         <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
         <h3 className="text-lg font-black text-slate-900">Oops! Something went wrong</h3>
         <p className="text-slate-500 font-medium mt-2 max-w-xs mx-auto">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 rounded-xl font-bold border-slate-200">Try Again</Button>
+        <Button variant="outline" onClick={() => fetchData()} className="mt-6 rounded-xl font-bold border-slate-200">Try Again</Button>
       </div>
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto pb-24">
-      {/* Premium Header/Breadcrumb */}
       <div className="flex items-center justify-between mb-12">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
@@ -234,11 +244,9 @@ export default function EditEquipmentPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Left Column: Core Data */}
         <div className="lg:col-span-12 space-y-12">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* 1. Basic Information */}
             <div className="space-y-6">
               <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-[#EA580C] pl-4">Basic Information</h2>
               <div className="space-y-4">
@@ -272,7 +280,7 @@ export default function EditEquipmentPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Asset Status</label>
-                    <Select value={formData.status || formData.availability} onValueChange={v => handleInputChange('status', v)}>
+                    <Select value={formData.status} onValueChange={v => handleInputChange('status', v)}>
                       <SelectTrigger className={selectCls}>
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
@@ -280,6 +288,7 @@ export default function EditEquipmentPage() {
                         <SelectItem value="available">Available</SelectItem>
                         <SelectItem value="rented">Rented</SelectItem>
                         <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="unavailable">Unavailable</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -297,7 +306,6 @@ export default function EditEquipmentPage() {
               </div>
             </div>
 
-            {/* 2. Technical Specs & Pricing */}
             <div className="space-y-6">
               <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-slate-900 pl-4">Asset Performance</h2>
               <div className="space-y-4">
@@ -360,20 +368,31 @@ export default function EditEquipmentPage() {
 
           <hr className="border-slate-100" />
 
-          {/* Media & Images Section */}
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] border-l-4 border-[#050B20] pl-4">Media Assets</h2>
               <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                {formData.images?.length || 0} / 10 VISUALS
+                {mediaItems.length} / 10 VISUALS
               </span>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6">
-              {(formData.images || []).map((src, index) => (
+              {mediaItems.map((img, index) => (
                 <div key={index} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-105">
-                  <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <img 
+                    src={img.localPreview || img.url} 
+                    alt={`Preview ${index}`} 
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${img.isUploading ? 'opacity-40 grayscale' : 'opacity-100'}`} 
+                  />
+                  {img.isUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Uploading</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
@@ -385,7 +404,7 @@ export default function EditEquipmentPage() {
                 </div>
               ))}
               
-              {(formData.images?.length || 0) < 10 && (
+              {mediaItems.length < 10 && (
                 <label className="flex flex-col items-center justify-center aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-white hover:border-[#EA580C] hover:shadow-lg hover:shadow-orange-500/5 transition-all cursor-pointer group relative overflow-hidden">
                   <div className="p-4 rounded-2xl bg-white shadow-md border border-slate-100 group-hover:bg-[#EA580C] group-hover:text-white transition-all">
                     <Upload className="w-6 h-6 text-slate-400 group-hover:text-white transition-colors" />
@@ -403,21 +422,20 @@ export default function EditEquipmentPage() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-6 pt-12">
             <Button
               type="submit"
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting || mediaItems.some(m => m.isUploading)}
               className="h-16 px-12 rounded-2xl bg-[#050B20] hover:bg-black text-white font-black text-sm shadow-2xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   SYNCHRONIZING...
                 </span>
-              ) : isUploading ? (
+              ) : mediaItems.some(m => m.isUploading) ? (
                 <span className="flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   UPLOADING...
                 </span>
               ) : (

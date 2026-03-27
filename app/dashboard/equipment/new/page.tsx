@@ -36,7 +36,7 @@ export default function AddEquipmentPage() {
   const [activeTab, setActiveTab] = useState<Tab>('equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [images, setImages] = useState<string[]>([])
+  const [images, setImages] = useState<{ url: string; isUploading: boolean; localPreview: string }[]>([])
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [companies, setCompanies] = useState<MarineCompany[]>([])
 
@@ -84,17 +84,38 @@ export default function AddEquipmentPage() {
     const files = e.target.files
     if (!files) return
 
-    const toastId = toast.loading('Uploading images...')
-    try {
-      const uploadPromises = Array.from(files).map(file => 
-        uploadToBackend(file, activeTab === 'vessel' ? 'vessel' : 'equipment')
-      )
-      const urls = await Promise.all(uploadPromises)
-      setImages((prev) => [...prev, ...urls])
-      toast.success('Images uploaded', { id: toastId })
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upload images', { id: toastId })
+    const newFiles = Array.from(files)
+    if (images.length + newFiles.length > 10) {
+      toast.error('Maximum 10 images allowed')
+      return
     }
+
+    // Add local previews immediately
+    const newItems = newFiles.map(file => ({
+      url: '',
+      isUploading: true,
+      localPreview: URL.createObjectURL(file)
+    }))
+    
+    setImages(prev => [...prev, ...newItems])
+
+    // Upload each file individually
+    newFiles.forEach(async (file, index) => {
+      const globalIndex = images.length + index
+      try {
+        const url = await uploadToBackend(file, activeTab === 'vessel' ? 'vessel' : 'equipment')
+        setImages(prev => {
+          const updated = [...prev]
+          if (updated[globalIndex]) {
+            updated[globalIndex] = { ...updated[globalIndex], url, isUploading: false }
+          }
+          return updated
+        })
+      } catch (err: any) {
+        toast.error(`Failed to upload ${file.name}: ${err.message}`)
+        setImages(prev => prev.filter((_, i) => i !== globalIndex))
+      }
+    })
   }
 
   const removeImage = (index: number) => {
@@ -117,7 +138,7 @@ export default function AddEquipmentPage() {
         details: data.details as string,
         status: (data.status as string) || 'Available',
         condition: data.condition as string || 'Excellent',
-        images: images.length > 0 ? images.join(',') : null, 
+        images: images.map(img => img.url).filter(Boolean), 
         weight: Number(data.weight) || 0,
         yearManufactured: Number(data.yearManufactured) || Number(data.yearBuilt) || 0,
         hourlyRate: Number(data.hourlyRate) || 0,
@@ -375,13 +396,25 @@ export default function AddEquipmentPage() {
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {images.map((src, index) => (
+              {images.map((img, index) => (
                 <div key={index} className="relative group aspect-square rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm transition-transform hover:scale-[1.02]">
-                  <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                  <img 
+                    src={img.localPreview || img.url} 
+                    alt={`Preview ${index}`} 
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${img.isUploading ? 'opacity-40 grayscale' : 'opacity-100'}`} 
+                  />
+                  {img.isUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                        <span className="text-[8px] font-bold text-primary uppercase tracking-widest">Uploading</span>
+                      </div>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-destructive shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-destructive shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   >
                     <X className="w-4 h-4" />
                   </button>
