@@ -47,6 +47,11 @@ export interface Order {
   orderNumber: string
   renterName: string
   renterEmail: string
+  phone?: string
+  country?: string
+  location?: string
+  postalCode?: string
+  description?: string
   equipmentId: number
   vesselId: number
   startDate: string

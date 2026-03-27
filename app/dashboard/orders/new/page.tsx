@@ -42,6 +42,11 @@ export default function NewOrderPage() {
     orderNumber: `ORD-${Math.floor(100000 + Math.random() * 900000)}`,
     renterName: '',
     renterEmail: '',
+    phone: '',
+    country: 'ng',
+    location: '',
+    postalCode: '',
+    description: '',
     equipmentId: 0,
     vesselId: 0,
     startDate: new Date().toISOString().split('T')[0],
@@ -201,15 +206,74 @@ export default function NewOrderPage() {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Email</label>
+                    <Input 
+                      value={formData.renterEmail} 
+                      onChange={e => handleInputChange('renterEmail', e.target.value)}
+                      type="email"
+                      placeholder="procurement@entity.com" 
+                      required 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                    <Input 
+                      value={formData.phone} 
+                      onChange={e => handleInputChange('phone', e.target.value)}
+                      type="tel"
+                      placeholder="+234..." 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Country</label>
+                    <Select value={formData.country || 'ng'} onValueChange={v => handleInputChange('country', v)}>
+                      <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900">
+                        <SelectValue placeholder="Select Country" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="ng">Nigeria</SelectItem>
+                        <SelectItem value="gh">Ghana</SelectItem>
+                        <SelectItem value="za">South Africa</SelectItem>
+                        <SelectItem value="uk">United Kingdom</SelectItem>
+                        <SelectItem value="us">United States</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Location / City</label>
+                    <Input 
+                      value={formData.location} 
+                      onChange={e => handleInputChange('location', e.target.value)}
+                      placeholder="City Name" 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Email</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Postal Code</label>
                   <Input 
-                    value={formData.renterEmail} 
-                    onChange={e => handleInputChange('renterEmail', e.target.value)}
-                    type="email"
-                    placeholder="procurement@entity.com" 
-                    required 
+                    value={formData.postalCode} 
+                    onChange={e => handleInputChange('postalCode', e.target.value)}
+                    placeholder="e.g. 101233" 
                     className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Entity Description Context</label>
+                  <textarea 
+                    value={formData.description}
+                    onChange={e => handleInputChange('description', e.target.value)}
+                    placeholder="Provide overview of the entity, operations, etc."
+                    className="w-full h-24 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:outline-none focus-visible:ring-slate-900 p-4 border"
                   />
                 </div>
               </div>
