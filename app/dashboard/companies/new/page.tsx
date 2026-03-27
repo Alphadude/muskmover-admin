@@ -159,12 +159,11 @@ export default function AddCompanyPage() {
         country: countryNames[formData.country] || formData.country,
         logo: logo || undefined,
         banner: banner || undefined,
-        verificationStatus: 'pending',
+        status: 'Pending',
         rating: 0,
         totalEquipment: 0,
         totalOrders: 0,
         totalRevenue: 0,
-        joinedDate: new Date(),
       })
       
       setShowSuccess(true)

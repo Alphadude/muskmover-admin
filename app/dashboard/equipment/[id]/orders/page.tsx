@@ -75,7 +75,7 @@ export default function EquipmentOrdersPage() {
       render: (value: string) => <span className="font-bold text-slate-900">{value}</span>,
     },
     {
-      key: 'rentedBy' as const,
+      key: 'renterName' as const,
       label: 'Rented By',
       width: '25%',
       render: (value: string, order: Order) => (

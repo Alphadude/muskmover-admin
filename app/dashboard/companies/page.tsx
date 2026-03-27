@@ -88,7 +88,7 @@ export default function CompaniesPage() {
               contactEmail: c.contactEmail || c.email || '',
               joinedDate: c.joinedDate || c.createdAt || new Date(),
               totalEquipment: c.totalEquipment ?? (Array.isArray(c.equipments) ? c.equipments.length + (Array.isArray(c.vessels) ? c.vessels.length : 0) : 0),
-              verificationStatus: c.verificationStatus || 'pending',
+              status: c.status || 'Pending',
               rating: c.rating ?? 0,
               totalOrders: orderCountByCompany[companyIdStr] || c.totalOrders || 0,
               totalRevenue: c.totalRevenue ?? 0,
@@ -161,9 +161,9 @@ export default function CompaniesPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'verified':
+      case 'Approved':
         return <Check className="w-4 h-4 text-green-500" />
-      case 'pending':
+      case 'Pending':
         return <Clock className="w-4 h-4 text-orange-500" />
       default:
         return null
@@ -214,7 +214,7 @@ export default function CompaniesPage() {
       width: '12%',
       render: (value: number, item: MarineCompany) => (
         <div className="flex items-center gap-2">
-          {item.verificationStatus === 'pending' ? (
+          {item.status === 'Pending' ? (
             <span className="text-muted-foreground">-</span>
           ) : (
             <>
@@ -226,19 +226,19 @@ export default function CompaniesPage() {
       ),
     },
     {
-      key: 'verificationStatus' as const,
+      key: 'status' as const,
       label: 'Status',
       width: '15%',
       render: (value: string) => {
         const statusConfig = {
-          verified: { label: 'Verified', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-100' },
-          unverified: { label: 'Unverified', className: 'bg-slate-50 text-slate-700 border-slate-100' },
+          Approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          Pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-100' },
+          Unverified: { label: 'Unverified', className: 'bg-slate-50 text-slate-700 border-slate-100' },
         }
-        const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.unverified
+        const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.Unverified
         return (
           <div className="flex items-center gap-2">
-            {getStatusIcon(value)}
+            {getStatusIcon(value || 'Unverified')}
             <Badge variant="outline" className={`font-bold border ${config.className}`}>
               {config.label}
             </Badge>
@@ -313,8 +313,8 @@ export default function CompaniesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Companies', value: companies.length, color: 'bg-slate-900' },
-          { label: 'Verified', value: companies.filter(c => c.verificationStatus === 'verified').length, color: 'bg-emerald-500' },
-          { label: 'Pending Review', value: companies.filter(c => c.verificationStatus === 'pending').length, color: 'bg-amber-500' },
+          { label: 'Verified', value: companies.filter(c => c.status === 'Approved').length, color: 'bg-emerald-500' },
+          { label: 'Pending Review', value: companies.filter(c => c.status === 'Pending').length, color: 'bg-amber-500' },
           { label: 'Avg Rating', value: companies.length > 0 ? (companies.reduce((s,c) => s + (c.rating || 0), 0) / (companies.filter(c => (c.rating || 0) > 0).length || 1)).toFixed(2) : '0.00', color: 'bg-blue-500' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-5 flex items-start gap-3">

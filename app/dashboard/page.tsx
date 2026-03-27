@@ -108,7 +108,7 @@ export default function Dashboard() {
         const totalEquipment = allEquipment.length
         const totalOrders = orders.length
         const activeOrders = orders.filter(o => o.status === 'active' || o.status === 'confirmed').length
-        const pendingVerifications = companies.filter(c => c.verificationStatus !== 'verified').length
+        const pendingVerifications = companies.filter((c: any) => c.status !== 'Approved').length
         
         // 2. Calculate Monthly Revenue
         const monthlyRevenue = orders
