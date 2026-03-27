@@ -48,10 +48,12 @@ export interface Order {
   renterName: string
   renterEmail: string
   phone?: string
-  country?: string
-  location?: string
-  postalCode?: string
-  description?: string
+  company?: string
+  contactPerson?: string
+  industrySector?: string
+  projectLocation?: string
+  totalDuration?: string
+  crewRequested?: boolean
   equipmentId: number
   vesselId: number
   startDate: string

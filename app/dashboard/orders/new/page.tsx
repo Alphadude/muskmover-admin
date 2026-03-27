@@ -42,11 +42,13 @@ export default function NewOrderPage() {
     orderNumber: `ORD-${Math.floor(100000 + Math.random() * 900000)}`,
     renterName: '',
     renterEmail: '',
+    company: '',
+    contactPerson: '',
     phone: '',
-    country: 'ng',
-    location: '',
-    postalCode: '',
-    description: '',
+    industrySector: '',
+    projectLocation: '',
+    totalDuration: '',
+    crewRequested: false,
     equipmentId: 0,
     vesselId: 0,
     startDate: new Date().toISOString().split('T')[0],
@@ -232,49 +234,68 @@ export default function NewOrderPage() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Country</label>
-                    <Select value={formData.country || 'ng'} onValueChange={v => handleInputChange('country', v)}>
-                      <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900">
-                        <SelectValue placeholder="Select Country" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="ng">Nigeria</SelectItem>
-                        <SelectItem value="gh">Ghana</SelectItem>
-                        <SelectItem value="za">South Africa</SelectItem>
-                        <SelectItem value="uk">United Kingdom</SelectItem>
-                        <SelectItem value="us">United States</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Company / Organization</label>
+                    <Input 
+                      value={formData.company} 
+                      onChange={e => handleInputChange('company', e.target.value)}
+                      placeholder="Company Name" 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Location / City</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Person</label>
                     <Input 
-                      value={formData.location} 
-                      onChange={e => handleInputChange('location', e.target.value)}
-                      placeholder="City Name" 
+                      value={formData.contactPerson} 
+                      onChange={e => handleInputChange('contactPerson', e.target.value)}
+                      placeholder="Name of Contact" 
                       className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Postal Code</label>
-                  <Input 
-                    value={formData.postalCode} 
-                    onChange={e => handleInputChange('postalCode', e.target.value)}
-                    placeholder="e.g. 101233" 
-                    className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Industry Sector</label>
+                    <Input 
+                      value={formData.industrySector} 
+                      onChange={e => handleInputChange('industrySector', e.target.value)}
+                      placeholder="e.g. Oil & Gas" 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Project Location</label>
+                    <Input 
+                      value={formData.projectLocation} 
+                      onChange={e => handleInputChange('projectLocation', e.target.value)}
+                      placeholder="Site or City" 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Entity Description Context</label>
-                  <textarea 
-                    value={formData.description}
-                    onChange={e => handleInputChange('description', e.target.value)}
-                    placeholder="Provide overview of the entity, operations, etc."
-                    className="w-full h-24 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:outline-none focus-visible:ring-slate-900 p-4 border"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Total Duration</label>
+                    <Input 
+                      value={formData.totalDuration} 
+                      onChange={e => handleInputChange('totalDuration', e.target.value)}
+                      placeholder="e.g. 6 Months" 
+                      className="h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus-visible:ring-1 focus-visible:ring-slate-900" 
+                    />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col justify-center">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Crew Requested</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="checkbox" 
+                        checked={formData.crewRequested || false} 
+                        onChange={e => handleInputChange('crewRequested', e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                      />
+                      <span className="text-sm font-medium text-slate-700">Yes, include crew</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -210,18 +210,26 @@ export default function OrderDetailsPage() {
                     <p className="text-sm font-bold text-slate-900">{order.phone || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location / Country</p>
-                    <p className="text-sm font-bold text-slate-900">{[order.location, order.country].filter(Boolean).join(', ') || 'N/A'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Company</p>
+                    <p className="text-sm font-bold text-slate-900">{order.company || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Identity ID</p>
-                    <p className="text-sm font-mono text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 w-fit uppercase tracking-tighter">
-                       USR-{order.id.toString().padStart(6, '0')}
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Person</p>
+                    <p className="text-sm font-bold text-slate-900">{order.contactPerson || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Industry Sector</p>
+                    <p className="text-sm font-bold text-slate-900">{order.industrySector || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Project Location</p>
+                    <p className="text-sm font-bold text-slate-900">{order.projectLocation || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration / Crew</p>
+                    <p className="text-sm font-bold text-slate-900">
+                      {order.totalDuration || 'N/A'} {order.crewRequested ? '(With Crew)' : ''}
                     </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Postal / ZIP Code</p>
-                    <p className="text-sm font-bold text-slate-900">{order.postalCode || 'N/A'}</p>
                   </div>
                   <div className="space-y-1 col-span-1 md:col-span-2">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Status</p>
@@ -231,13 +239,6 @@ export default function OrderDetailsPage() {
                   </div>
                 </div>
               </div>
-              
-              {order.description && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Entity Description Context</p>
-                  <p className="text-sm text-slate-600 font-medium leading-relaxed">{order.description}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
 
