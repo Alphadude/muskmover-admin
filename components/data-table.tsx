@@ -171,13 +171,17 @@ export function DataTable<T extends { id: string | number }>({
                    {columns.map((col) => {
                      const value = col.key === 'actions' ? undefined : (item as any)[col.key]
                      return (
-                       <td key={String(col.key)} className="px-4 py-3.5">
+                       <TableCell 
+                         key={String(col.key)} 
+                         className="px-4 py-3.5"
+                         onClick={col.key === 'actions' ? (e) => e.stopPropagation() : undefined}
+                       >
                          <div className="text-sm text-slate-700">
                            {col.render
                              ? col.render(value, item)
                              : String(value ?? '')}
                          </div>
-                       </td>
+                       </TableCell>
                      )
                    })}
                 </TableRow>
