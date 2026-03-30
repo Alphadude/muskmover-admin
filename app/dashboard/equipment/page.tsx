@@ -132,6 +132,24 @@ export default function EquipmentPage() {
     return companies.find((c) => c.id === companyId)?.name || 'Unknown'
   }
 
+  const handleDelete = async (item: any) => {
+    if (!window.confirm(`Are you sure you want to delete ${item.name}? This action cannot be undone.`)) return
+    
+    try {
+      setIsLoading(true)
+      if (item._type === 'vessel') {
+        await equipmentService.deleteVessel(item.id)
+      } else {
+        await equipmentService.delete(item.id)
+      }
+      setEquipment(prev => prev.filter(e => e.id !== item.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete asset')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
 
   const columns = [
     {
@@ -214,7 +232,13 @@ export default function EquipmentPage() {
             <DropdownMenuItem asChild>
               <Link href={`/dashboard/equipment/${item.id}/orders`}>View Orders</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDelete(item)
+              }}
+            >
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>

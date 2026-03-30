@@ -21,6 +21,7 @@ import {
   Info,
   Scale,
   Construction,
+  Trash2,
 } from 'lucide-react'
 import { equipmentService } from '@/lib/services/equipment'
 import { companyService } from '@/lib/services/company'
@@ -38,6 +39,25 @@ export default function EquipmentDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeImage, setActiveImage] = useState<string | null>(null)
+
+  const handleDelete = async () => {
+    if (!item) return
+    if (!window.confirm(`Are you sure you want to delete ${item.name}? This action cannot be undone.`)) return
+    
+    try {
+      setIsLoading(true)
+      // Determine if it's a vessel based on category
+      if (item.category === 'vessels' || (item as any)._type === 'vessel') {
+        await equipmentService.deleteVessel(String(item.id))
+      } else {
+        await equipmentService.delete(String(item.id))
+      }
+      router.push('/dashboard/equipment')
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete asset')
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -127,6 +147,9 @@ export default function EquipmentDetailPage() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          <Button onClick={handleDelete} variant="outline" size="lg" className="rounded-2xl border-red-200 text-red-600 font-black h-14 px-6 shadow-sm hover:bg-red-50 transition-all active:scale-95">
+            <Trash2 className="w-4 h-4" />
+          </Button>
           <Button variant="outline" size="lg" asChild className="rounded-2xl border-slate-200 font-black h-14 px-8 text-slate-600 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
             <Link href={`/dashboard/equipment/${item.id}/edit`} className="gap-2">
               <Edit className="w-4 h-4" />

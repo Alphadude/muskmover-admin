@@ -33,4 +33,8 @@ export const equipmentService = {
   async delete(id: string): Promise<void> {
     return api.delete<void>(`/api/equipment/${id}`);
   },
+
+  async deleteVessel(id: string): Promise<void> {
+    return api.delete<void>(`/api/vessels/${id}`);
+  },
 };
