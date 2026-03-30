@@ -29,6 +29,7 @@ import { Equipment, MarineCompany } from '@/lib/types'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal'
 
 export default function EquipmentDetailPage() {
   const router = useRouter()
@@ -39,23 +40,26 @@ export default function EquipmentDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeImage, setActiveImage] = useState<string | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
     if (!item) return
-    if (!window.confirm(`Are you sure you want to delete ${item.name}? This action cannot be undone.`)) return
     
     try {
-      setIsLoading(true)
+      setIsDeleting(true)
       // Determine if it's a vessel based on category
       if (item.category === 'vessels' || (item as any)._type === 'vessel') {
         await equipmentService.deleteVessel(String(item.id))
       } else {
         await equipmentService.delete(String(item.id))
       }
+      setIsDeleteModalOpen(false)
       router.push('/dashboard/equipment')
     } catch (err: any) {
       setError(err.message || 'Failed to delete asset')
-      setIsLoading(false)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -147,7 +151,7 @@ export default function EquipmentDetailPage() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={handleDelete} variant="outline" size="lg" className="rounded-2xl border-red-200 text-red-600 font-black h-14 px-6 shadow-sm hover:bg-red-50 transition-all active:scale-95">
+          <Button onClick={() => setIsDeleteModalOpen(true)} variant="outline" size="lg" className="rounded-2xl border-red-200 text-red-600 font-black h-14 px-6 shadow-sm hover:bg-red-50 transition-all active:scale-95">
             <Trash2 className="w-4 h-4" />
           </Button>
           <Button variant="outline" size="lg" asChild className="rounded-2xl border-slate-200 font-black h-14 px-8 text-slate-600 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
@@ -358,6 +362,16 @@ export default function EquipmentDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        title="Confirm Deletion"
+        description={`Are you sure you want to delete "${item?.name}"? All associated data will be permanently removed from the system. This action cannot be undone.`}
+      />
     </div>
   )
 }

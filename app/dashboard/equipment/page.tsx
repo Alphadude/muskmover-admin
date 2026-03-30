@@ -29,6 +29,7 @@ import { equipmentService } from '@/lib/services/equipment'
 import { companyService } from '@/lib/services/company'
 import { Equipment, MarineCompany } from '@/lib/types'
 import { useEffect } from 'react'
+import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal'
 
 export default function EquipmentPage() {
   const router = useRouter()
@@ -39,6 +40,9 @@ export default function EquipmentPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<keyof Equipment | 'actions'>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [itemToDelete, setItemToDelete] = useState<any>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -132,22 +136,29 @@ export default function EquipmentPage() {
     return companies.find((c) => c.id === companyId)?.name || 'Unknown'
   }
 
-  const handleDelete = async (item: any) => {
-    if (!window.confirm(`Are you sure you want to delete ${item.name}? This action cannot be undone.`)) return
+  const handleDelete = async () => {
+    if (!itemToDelete) return
     
     try {
-      setIsLoading(true)
-      if (item._type === 'vessel') {
-        await equipmentService.deleteVessel(item.id)
+      setIsDeleting(true)
+      if (itemToDelete._type === 'vessel') {
+        await equipmentService.deleteVessel(itemToDelete.id)
       } else {
-        await equipmentService.delete(item.id)
+        await equipmentService.delete(itemToDelete.id)
       }
-      setEquipment(prev => prev.filter(e => e.id !== item.id))
+      setEquipment(prev => prev.filter(e => e.id !== itemToDelete.id))
+      setIsDeleteModalOpen(false)
+      setItemToDelete(null)
     } catch (err: any) {
       setError(err.message || 'Failed to delete asset')
     } finally {
-      setIsLoading(false)
+      setIsDeleting(false)
     }
+  }
+
+  const triggerDelete = (item: any) => {
+    setItemToDelete(item)
+    setIsDeleteModalOpen(true)
   }
 
 
@@ -236,7 +247,7 @@ export default function EquipmentPage() {
               className="text-destructive focus:text-destructive cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation()
-                handleDelete(item)
+                triggerDelete(item)
               }}
             >
               Delete
@@ -354,7 +365,7 @@ export default function EquipmentPage() {
       </div>
 
       {/* Maintenance Alert */}
-      {equipment.filter((e) => e.availability === 'maintenance').length > 0 && (
+      {equipment.filter((e) => (e.status || e.availability || '').toLowerCase() === 'maintenance').length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm font-medium text-amber-800">
@@ -362,6 +373,16 @@ export default function EquipmentPage() {
           </p>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        title="Confirm Deletion"
+        description={`Are you sure you want to delete "${itemToDelete?.name}"? All associated data will be permanently removed from the system.`}
+      />
     </div>
   )
 }
