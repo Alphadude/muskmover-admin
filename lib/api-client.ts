@@ -1,4 +1,4 @@
-export const BASE_URL = 'https://musk-backend.onrender.com';
+export const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://206.189.238.173:5000').replace(/\/$/, '');
 
 export async function apiRequest<T>(
   path: string,
