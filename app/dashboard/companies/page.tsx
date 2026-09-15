@@ -112,7 +112,8 @@ export default function CompaniesPage() {
         const location = company.location || ''
         return (
           name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          location.toLowerCase().includes(searchTerm.toLowerCase())
+          location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (company.country || '').toLowerCase().includes(searchTerm.toLowerCase())
         )
       })
     

@@ -27,6 +27,8 @@ import { toast } from 'sonner'
 import { companyService } from '@/lib/services/company'
 import { SuccessModal } from '@/components/ui/success-modal'
 import { MarineCompany } from '@/lib/types'
+import { CountrySelect } from '@/components/country-select'
+import { getCountryCode, getCountryName } from '@/lib/countries'
 
 export default function EditCompanyPage() {
   const router = useRouter()
@@ -44,18 +46,6 @@ export default function EditCompanyPage() {
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const countryNames: Record<string, string> = {
-    ng: 'Nigeria',
-    gh: 'Ghana',
-    za: 'South Africa',
-    uk: 'United Kingdom',
-    us: 'United States',
-  }
-
-  // Reverse mapping for select component
-  const getCountryCode = (name: string) => {
-    return Object.keys(countryNames).find(key => countryNames[key] === name) || 'ng'
-  }
 
   const [formData, setFormData] = useState({
     name: '',
@@ -194,7 +184,7 @@ export default function EditCompanyPage() {
       await companyService.update(companyId, {
         ...formData,
         email: formData.contactEmail,
-        country: countryNames[formData.country] || formData.country,
+        country: getCountryName(formData.country) || formData.country,
         logo: logo || undefined,
         banner: banner || undefined,
       })
@@ -369,21 +359,10 @@ export default function EditCompanyPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Country</label>
-                  <Select 
-                    value={formData.country} 
+                  <CountrySelect
+                    value={formData.country}
                     onValueChange={(val) => setFormData({...formData, country: val})}
-                  >
-                    <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900">
-                      <SelectValue placeholder="Select Country" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="ng">Nigeria</SelectItem>
-                      <SelectItem value="gh">Ghana</SelectItem>
-                      <SelectItem value="za">South Africa</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                      <SelectItem value="us">United States</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Location / City</label>

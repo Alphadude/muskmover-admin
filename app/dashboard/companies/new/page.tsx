@@ -26,6 +26,8 @@ import {
 import { toast } from 'sonner'
 import { companyService } from '@/lib/services/company'
 import { SuccessModal } from '@/components/ui/success-modal'
+import { CountrySelect } from '@/components/country-select'
+import { getCountryName } from '@/lib/countries'
 
 export default function AddCompanyPage() {
   const router = useRouter()
@@ -38,13 +40,6 @@ export default function AddCompanyPage() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [mediaError, setMediaError] = useState<string | null>(null)
 
-  const countryNames: Record<string, string> = {
-    ng: 'Nigeria',
-    gh: 'Ghana',
-    za: 'South Africa',
-    uk: 'United Kingdom',
-    us: 'United States',
-  }
   const [formData, setFormData] = useState({
     name: '',
     contactEmail: '',
@@ -156,7 +151,7 @@ export default function AddCompanyPage() {
       await companyService.create({
         ...formData,
         email: formData.contactEmail,
-        country: countryNames[formData.country] || formData.country,
+        country: getCountryName(formData.country) || formData.country,
         logo: logo || undefined,
         banner: banner || undefined,
         status: 'Pending',
@@ -303,21 +298,11 @@ export default function AddCompanyPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Country</label>
-                  <Select 
-                    defaultValue="ng" 
+                  <CountrySelect
+                    value={formData.country}
+                    defaultValue="ng"
                     onValueChange={(val) => setFormData({...formData, country: val})}
-                  >
-                    <SelectTrigger className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/30 text-sm font-medium focus:ring-1 focus:ring-slate-900">
-                      <SelectValue placeholder="Select Country" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="ng">Nigeria</SelectItem>
-                      <SelectItem value="gh">Ghana</SelectItem>
-                      <SelectItem value="za">South Africa</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                      <SelectItem value="us">United States</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Location / City</label>
