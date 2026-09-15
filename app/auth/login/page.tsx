@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Ship } from 'lucide-react'
 import { authService } from '@/lib/services/auth'
-import { useEffect } from 'react'
+import { ErrorBanner } from '@/components/error-banner'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -80,9 +80,11 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="p-3 text-sm rounded bg-destructive/10 border border-destructive/20 text-destructive text-center">
-              {error}
-            </div>
+            <ErrorBanner
+              title="Sign-In Failed"
+              message={error}
+              onDismiss={() => setError('')}
+            />
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,7 +93,10 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (error) setError('')
+                }}
                 placeholder="admin@marketplace.com"
                 className="w-full px-4 py-3 rounded bg-transparent border border-border text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground focus:border-foreground transition-colors"
                 required
@@ -105,7 +110,10 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (error) setError('')
+                  }}
                   placeholder="••••••••"
                   className="w-full px-4 py-3 rounded bg-transparent border border-border text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground focus:border-foreground transition-colors pr-10"
                   required

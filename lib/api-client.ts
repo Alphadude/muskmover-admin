@@ -1,4 +1,17 @@
-export const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://206.189.238.173:5000').replace(/\/$/, '');
+const configuredUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+
+export function getBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    // If browser is running over HTTPS, plain HTTP requests are blocked as Mixed Content.
+    // Use relative path ('') so requests are routed through Next.js reverse proxy rewrites.
+    if (window.location.protocol === 'https:' && (!configuredUrl || configuredUrl.startsWith('http://'))) {
+      return '';
+    }
+  }
+  return configuredUrl || 'http://206.189.238.173:5000';
+}
+
+export const BASE_URL = configuredUrl || 'http://206.189.238.173:5000';
 
 export async function apiRequest<T>(
   path: string,
@@ -12,14 +25,20 @@ export async function apiRequest<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const baseUrl = getBaseUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    const message = errorData.error || errorData.message || response.statusText || 'Request failed';
+    const message =
+      (typeof errorData.message === 'string' && errorData.message.trim() ? errorData.message.trim() : null) ||
+      (typeof errorData.error === 'string' && errorData.error !== 'An error occurred' && errorData.error.trim() ? errorData.error.trim() : null) ||
+      errorData.error ||
+      response.statusText ||
+      'Request failed';
     throw new Error(message);
   }
 
