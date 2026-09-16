@@ -8,10 +8,10 @@ export function getBaseUrl(): string {
       return '';
     }
   }
-  return configuredUrl || 'http://206.189.238.173:5000';
+  return configuredUrl || 'http://206.189.238.173:80';
 }
 
-export const BASE_URL = configuredUrl || 'http://206.189.238.173:5000';
+export const BASE_URL = configuredUrl || 'http://206.189.238.173:80';
 
 export async function apiRequest<T>(
   path: string,
