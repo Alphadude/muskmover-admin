@@ -60,22 +60,37 @@ export default function UsersPage() {
     role: 'manager' as UserRole,
   })
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setIsLoading(true)
-        const data = await userService.getAll()
-        const usersArray = Array.isArray(data) ? data : (data as any)?.users || (data as any)?.data || []
-        setUsers(usersArray)
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch users')
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true)
+      setError('')
+      const data = await userService.getAll()
+      const rawUsers = Array.isArray(data)
+        ? data
+        : (data as any)?.admins || (data as any)?.data?.admins || (data as any)?.users || (data as any)?.data?.users || (data as any)?.data || []
+      
+      const usersArray: AdminUser[] = (Array.isArray(rawUsers) ? rawUsers : []).map((u: any) => ({
+        id: String(u.id || ''),
+        name: u.name || '',
+        email: u.email || '',
+        role: (typeof u.role === 'string' ? u.role.toLowerCase() : 'manager') as UserRole,
+        status: (typeof u.status === 'string' ? u.status.toLowerCase() : 'active') as UserStatus,
+        createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
+        lastLogin: u.lastLogin ? new Date(u.lastLogin) : undefined,
+        avatar: u.avatar || undefined,
+      }))
+      setUsers(usersArray)
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch users')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchUsers()
   }, [])
+
 
   const handleEditUser = (user: AdminUser) => {
     setEditingUser({ ...user })
@@ -309,17 +324,26 @@ export default function UsersPage() {
             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
               <Plus className="w-6 h-6 text-destructive rotate-45" />
             </div>
-            <div>
+            <div className="max-w-md mx-auto">
               <p className="text-lg font-bold text-foreground">Something went wrong</p>
-              <p className="text-sm text-muted-foreground max-w-xs mx-auto">{error}</p>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{error}</p>
             </div>
-            <Button 
-                variant="outline" 
-                onClick={() => window.location.reload()}
-                className="mt-2"
-            >
+            <div className="flex items-center gap-3 mt-2">
+              <Button 
+                variant="default" 
+                onClick={() => fetchUsers()}
+              >
                 Try Again
-            </Button>
+              </Button>
+              {error.toLowerCase().includes('log in') || error.includes('401') ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/auth/login')}
+                >
+                  Go to Login
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : (
           <DataTable

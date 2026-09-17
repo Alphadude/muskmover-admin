@@ -7,7 +7,10 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
-    const backendUrl = (process.env.BACKEND_API_URL || 'http://206.189.238.173:80').replace(/\/$/, '')
+    const backendUrl = (process.env.BACKEND_API_URL || 'https://api.muskmover.ng')
+      .trim()
+      .replace(/\/+$/, '')
+      .replace(/\/api-docs\/?$/, '')
     return [
       {
         source: '/api/:path*',
