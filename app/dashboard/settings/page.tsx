@@ -4,9 +4,11 @@ import { settingsService } from '@/lib/services/settings'
 import { PlatformSettings } from '@/lib/types'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { Bell, Shield, Package, Lock, Globe, Save, User } from 'lucide-react'
 
 export default function SettingsPage() {
+  const { showSuccess } = useSuccessModal()
   const [settings, setSettings] = useState<PlatformSettings | null>(null)
   const [activeTab, setActiveTab] = useState('general')
   const [isLoading, setIsLoading] = useState(true)
@@ -40,6 +42,11 @@ export default function SettingsPage() {
       const updated = await settingsService.updateSettings({ ...settings, ...updates })
       setSettings(updated)
       toast.success('Settings updated successfully')
+      showSuccess({
+        title: 'Settings Saved',
+        message: 'Platform settings and preferences have been updated.',
+        actionLabel: 'Done',
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to update settings')
     } finally {
@@ -52,7 +59,11 @@ export default function SettingsPage() {
     sessionStorage.setItem('userName', profileData.name)
     sessionStorage.setItem('userEmail', profileData.email)
     toast.success('Profile updated locally')
-    // In a real app, we'd call an API here
+    showSuccess({
+      title: 'Profile Updated',
+      message: 'Your profile details have been saved.',
+      actionLabel: 'Done',
+    })
   }
 
   if (isLoading) {

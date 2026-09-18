@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { 
   ArrowLeft, 
   CheckCircle, 
@@ -32,7 +33,9 @@ import { toast } from 'sonner'
 
 export default function ManageOrderStatusPage() {
   const router = useRouter()
-  const { id } = useParams()
+  const params = useParams()
+  const { showSuccess } = useSuccessModal()
+  const id = params.id as string
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -113,7 +116,13 @@ export default function ManageOrderStatusPage() {
       }
 
       toast.success('Agreement and Asset updated successfully')
-      router.push(`/dashboard/orders/${id}`)
+      showSuccess({
+        title: 'Order Updated Successfully',
+        message: 'The lease agreement and asset status have been saved.',
+        actionLabel: 'View Order',
+        onAction: () => router.push(`/dashboard/orders/${id}`),
+        onClose: () => router.push(`/dashboard/orders/${id}`),
+      })
     } catch (err: any) {
       console.error('Save failed:', err)
       toast.error(err.message || 'Failed to update status')

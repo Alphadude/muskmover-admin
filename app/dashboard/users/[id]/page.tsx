@@ -34,10 +34,12 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useSuccessModal } from '@/components/ui/success-modal'
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
+  const { showSuccess } = useSuccessModal()
   const [user, setUser] = useState<AdminUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   
@@ -73,8 +75,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       })
       
       setUser({ ...editingUser })
+      const updatedName = editingUser.name
       setIsEditDialogOpen(false)
       toast.success('User updated successfully')
+      showSuccess({
+        title: 'User Updated',
+        message: `${updatedName}'s profile and role settings have been updated.`,
+        actionLabel: 'Done',
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to update user')
     } finally {

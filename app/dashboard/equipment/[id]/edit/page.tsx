@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { equipmentService } from '@/lib/services/equipment'
 import { companyService } from '@/lib/services/company'
 import { Equipment, MarineCompany } from '@/lib/types'
@@ -32,8 +33,9 @@ interface MediaItem {
 }
 
 export default function EditEquipmentPage() {
-  const router = useRouter()
   const params = useParams()
+  const router = useRouter()
+  const { showSuccess } = useSuccessModal()
   const id = params.id as string
   
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -200,7 +202,13 @@ export default function EditEquipmentPage() {
       await equipmentService.update(id, payload as any)
       
       toast.success('Asset updated successfully')
-      router.push(`/dashboard/equipment/${id}`)
+      showSuccess({
+        title: 'Asset Updated Successfully',
+        message: `${formData.name} details have been updated.`,
+        actionLabel: 'View Asset',
+        onAction: () => router.push(`/dashboard/equipment/${id}`),
+        onClose: () => router.push(`/dashboard/equipment/${id}`),
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to update asset')
     } finally {

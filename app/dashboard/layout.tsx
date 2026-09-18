@@ -5,6 +5,8 @@ import { Header } from '@/components/header'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { SuccessModalProvider } from '@/components/ui/success-modal'
+
 export default function DashboardLayout({
   children,
 }: {
@@ -50,16 +52,18 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header title={getTitle(pathname)} />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10">
-          <div className="max-w-[1600px] mx-auto">
-            {children}
-          </div>
-        </main>
+    <SuccessModalProvider>
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <Header title={getTitle(pathname)} />
+          <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10">
+            <div className="max-w-[1600px] mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SuccessModalProvider>
   )
 }

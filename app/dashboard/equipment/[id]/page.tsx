@@ -28,12 +28,14 @@ import { companyService } from '@/lib/services/company'
 import { Equipment, MarineCompany } from '@/lib/types'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal'
 
 export default function EquipmentDetailPage() {
   const router = useRouter()
   const params = useParams()
+  const { showSuccess } = useSuccessModal()
   const id = params.id as string
   const [item, setItem] = useState<Equipment | null>(null)
   const [company, setCompany] = useState<MarineCompany | null>(null)
@@ -45,6 +47,7 @@ export default function EquipmentDetailPage() {
 
   const handleDelete = async () => {
     if (!item) return
+    const assetName = item.name
     
     try {
       setIsDeleting(true)
@@ -55,7 +58,13 @@ export default function EquipmentDetailPage() {
         await equipmentService.delete(String(item.id))
       }
       setIsDeleteModalOpen(false)
-      router.push('/dashboard/equipment')
+      showSuccess({
+        title: 'Asset Deleted',
+        message: `${assetName} has been successfully deleted.`,
+        actionLabel: 'Return to Inventory',
+        onAction: () => router.push('/dashboard/equipment'),
+        onClose: () => router.push('/dashboard/equipment'),
+      })
     } catch (err: any) {
       setError(err.message || 'Failed to delete asset')
     } finally {

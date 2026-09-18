@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DataTable } from '@/components/data-table'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -44,6 +45,7 @@ import { toast } from 'sonner'
 
 export default function UsersPage() {
   const router = useRouter()
+  const { showSuccess } = useSuccessModal()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -110,8 +112,15 @@ export default function UsersPage() {
       const createdUser = data.admin || data.data || data
       setUsers(prev => [...prev, createdUser])
       setIsAddUserOpen(false)
+      const createdName = createdUser.name || newUser.name
+      const createdRole = newUser.role
       setNewUser({ name: '', email: '', password: '', role: 'manager' })
       toast.success('User created successfully')
+      showSuccess({
+        title: 'User Created',
+        message: `${createdName} has been successfully added as a ${createdRole}.`,
+        actionLabel: 'Done',
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to create user')
     } finally {
@@ -133,8 +142,14 @@ export default function UsersPage() {
       
       const updatedUsers = users.map(u => u.id === editingUser.id ? editingUser : u)
       setUsers(updatedUsers)
+      const updatedName = editingUser.name
       setIsEditDialogOpen(false)
       toast.success('User updated successfully')
+      showSuccess({
+        title: 'User Updated',
+        message: `${updatedName}'s profile and permissions have been saved.`,
+        actionLabel: 'Done',
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to update user')
     } finally {

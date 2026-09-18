@@ -36,10 +36,12 @@ import { orderService } from '@/lib/services/order'
 import { MarineCompany, Equipment, Order, CompanyVerificationStatus } from '@/lib/types'
 import { useEffect } from 'react'
 import { DataTable } from '@/components/data-table'
+import { useSuccessModal } from '@/components/ui/success-modal'
 
 export default function CompanyDetailPage() {
-  const router = useRouter()
   const params = useParams()
+  const router = useRouter()
+  const { showSuccess } = useSuccessModal()
   const companyId = params.id as string
   const [company, setCompany] = useState<MarineCompany | null>(null)
   const [equipment, setEquipment] = useState<Equipment[]>([])
@@ -105,7 +107,11 @@ export default function CompanyDetailPage() {
       await companyService.update(companyId, { status: newStatus })
       setCompany({ ...company, status: newStatus })
       toast.success(`Company status updated to ${newStatus}`, { id: toastId })
-      // Refresh to ensure any server components or global state are in sync
+      showSuccess({
+        title: 'Status Updated',
+        message: `${company.name} status is now ${newStatus}.`,
+        actionLabel: 'Done',
+      })
       router.refresh()
     } catch (err: any) {
       toast.error(err.message || 'Failed to update status', { id: toastId })
@@ -114,11 +120,18 @@ export default function CompanyDetailPage() {
 
   const handleStatusDelete = async () => {
     if (!company) return
+    const compName = company.name
     const toastId = toast.loading('Deleting company...')
     try {
       await companyService.delete(companyId)
       toast.success('Company deleted successfully', { id: toastId })
-      router.push('/dashboard/companies')
+      showSuccess({
+        title: 'Company Deleted',
+        message: `${compName} has been successfully deleted.`,
+        actionLabel: 'Return to Directory',
+        onAction: () => router.push('/dashboard/companies'),
+        onClose: () => router.push('/dashboard/companies'),
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete company', { id: toastId })
     }

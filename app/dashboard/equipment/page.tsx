@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { DataTable } from '@/components/data-table'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +34,7 @@ import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-mod
 
 export default function EquipmentPage() {
   const router = useRouter()
+  const { showSuccess } = useSuccessModal()
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [companies, setCompanies] = useState<MarineCompany[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -148,6 +150,7 @@ export default function EquipmentPage() {
 
   const handleDelete = async () => {
     if (!itemToDelete) return
+    const assetName = itemToDelete.name || 'Asset'
     
     try {
       setIsDeleting(true)
@@ -159,6 +162,11 @@ export default function EquipmentPage() {
       setEquipment(prev => prev.filter(e => e.id !== itemToDelete.id))
       setIsDeleteModalOpen(false)
       setItemToDelete(null)
+      showSuccess({
+        title: 'Asset Deleted',
+        message: `${assetName} has been successfully removed from inventory.`,
+        actionLabel: 'Done',
+      })
     } catch (err: any) {
       setError(err.message || 'Failed to delete asset')
     } finally {

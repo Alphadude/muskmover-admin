@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { DataTable } from '@/components/data-table'
+import { useSuccessModal } from '@/components/ui/success-modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +46,7 @@ import {
 
 export default function CompaniesPage() {
   const router = useRouter()
+  const { showSuccess } = useSuccessModal()
   const [companies, setCompanies] = useState<MarineCompany[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -157,11 +159,17 @@ export default function CompaniesPage() {
 
   const handleDelete = async () => {
     if (!companyToDelete) return
+    const deletedName = companyToDelete.name
     const toastId = toast.loading('Deleting company...')
     try {
       await companyService.delete(companyToDelete.id)
       setCompanies(companies.filter(c => c.id !== companyToDelete.id))
       toast.success('Company deleted successfully', { id: toastId })
+      showSuccess({
+        title: 'Company Deleted',
+        message: `${deletedName} has been successfully removed from the directory.`,
+        actionLabel: 'Done',
+      })
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete company', { id: toastId })
     } finally {
