@@ -164,7 +164,16 @@ export default function AddCompanyPage() {
       setShowSuccess(true)
       toast.success('Company created successfully!')
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create company')
+      const errMsg = err.message || 'Failed to create company'
+      if (
+        errMsg.toLowerCase().includes('unique') ||
+        errMsg.toLowerCase().includes('already exists') ||
+        errMsg.includes('company_email_key')
+      ) {
+        toast.error('A company with this contact email already exists. Please use a unique email.')
+      } else {
+        toast.error(errMsg)
+      }
     } finally {
       setIsSubmitting(false)
     }

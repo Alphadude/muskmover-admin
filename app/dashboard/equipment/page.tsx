@@ -43,6 +43,7 @@ export default function EquipmentPage() {
   const [itemToDelete, setItemToDelete] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,6 +123,15 @@ export default function EquipmentPage() {
 
     return sorted
   }, [equipment, searchTerm, sortBy, sortDirection])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, sortBy, sortDirection])
+
+  const paginatedEquipment = useMemo(() => {
+    const startIndex = (currentPage - 1) * 10
+    return filteredEquipment.slice(startIndex, startIndex + 10)
+  }, [filteredEquipment, currentPage])
 
   const handleSort = (key: keyof Equipment | 'actions') => {
     if (sortBy === key) {
@@ -349,14 +359,16 @@ export default function EquipmentPage() {
           </div>
         ) : (
           <DataTable
-            data={filteredEquipment}
+            data={paginatedEquipment}
             columns={columns}
             sortBy={sortBy}
             sortDirection={sortDirection}
             onSort={handleSort}
-            totalItems={equipment.length}
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(filteredEquipment.length / 10))}
+            totalItems={filteredEquipment.length}
             itemsPerPage={10}
-            totalPages={Math.ceil(equipment.length / 10)}
+            onPageChange={(page) => setCurrentPage(page)}
             onRowClick={(item) =>
               router.push(`/dashboard/equipment/${item.id}`)
             }

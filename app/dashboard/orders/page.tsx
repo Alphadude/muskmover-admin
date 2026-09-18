@@ -41,6 +41,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<keyof Order | 'actions'>('startDate')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,6 +123,15 @@ export default function OrdersPage() {
           : (bValue as number) - (aValue as number)
       })
   }, [orders, searchTerm, sortBy, sortDirection])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, sortBy, sortDirection])
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * 10
+    return filteredOrders.slice(startIndex, startIndex + 10)
+  }, [filteredOrders, currentPage])
 
   const handleSort = (key: keyof Order | 'actions') => {
     if (sortBy === key) {
@@ -377,14 +387,16 @@ export default function OrdersPage() {
           </div>
         ) : (
           <DataTable
-            data={filteredOrders}
+            data={paginatedOrders}
             columns={columns}
             sortBy={sortBy}
             sortDirection={sortDirection}
             onSort={handleSort}
-            totalItems={orders.length}
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(filteredOrders.length / 10))}
+            totalItems={filteredOrders.length}
             itemsPerPage={10}
-            totalPages={Math.ceil(orders.length / 10)}
+            onPageChange={(page) => setCurrentPage(page)}
             onRowClick={(item) => {}}
           />
         )}

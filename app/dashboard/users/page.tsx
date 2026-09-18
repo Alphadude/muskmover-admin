@@ -48,6 +48,7 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -146,6 +147,15 @@ export default function UsersPage() {
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase())
     ), [users, searchTerm])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * 10
+    return filteredUsers.slice(startIndex, startIndex + 10)
+  }, [filteredUsers, currentPage])
 
   const getRoleBadge = (role: string) => {
     const styles: Record<string, string> = {
@@ -347,11 +357,13 @@ export default function UsersPage() {
           </div>
         ) : (
           <DataTable
-            data={filteredUsers}
+            data={paginatedUsers}
             columns={columns}
-            totalItems={users.length}
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(filteredUsers.length / 10))}
+            totalItems={filteredUsers.length}
             itemsPerPage={10}
-            totalPages={Math.ceil(users.length / 10)}
+            onPageChange={(page) => setCurrentPage(page)}
           />
         )}
       </div>

@@ -53,6 +53,7 @@ export default function CompaniesPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [companyToDelete, setCompanyToDelete] = useState<MarineCompany | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -135,6 +136,15 @@ export default function CompaniesPage() {
 
     return sorted
   }, [companies, searchTerm, sortBy, sortDirection])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, sortBy, sortDirection])
+
+  const paginatedCompanies = useMemo(() => {
+    const startIndex = (currentPage - 1) * 10
+    return filteredCompanies.slice(startIndex, startIndex + 10)
+  }, [filteredCompanies, currentPage])
 
   const handleSort = (key: keyof MarineCompany | 'actions') => {
     if (sortBy === key) {
@@ -387,14 +397,16 @@ export default function CompaniesPage() {
           </div>
         ) : (
           <DataTable
-            data={filteredCompanies}
+            data={paginatedCompanies}
             columns={columns}
             sortBy={sortBy}
             sortDirection={sortDirection}
             onSort={handleSort}
-            totalItems={companies.length}
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(filteredCompanies.length / 10))}
+            totalItems={filteredCompanies.length}
             itemsPerPage={10}
-            totalPages={Math.ceil(companies.length / 10)}
+            onPageChange={(page) => setCurrentPage(page)}
             onRowClick={(company) =>
               router.push(`/dashboard/companies/${company.id}`)
             }
